@@ -27,5 +27,6 @@ export function frenchAuthError(message: string): string {
   if (/email not confirmed/i.test(message)) return 'Adresse email non confirmée.'
   if (/password should be at least/i.test(message)) return 'Le mot de passe doit contenir au moins 6 caractères.'
   if (/rate limit|too many/i.test(message)) return 'Trop de tentatives. Réessaie dans quelques minutes.'
+  if (/failed to fetch|network/i.test(message)) return 'Connexion impossible. Vérifie ta connexion internet.'
   return message
 }

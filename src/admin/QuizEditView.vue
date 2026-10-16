@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Sortable from 'sortablejs'
-import { useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { plainText } from '../format'
 import Icon from '../Icon.vue'
 import { TYPE_LABELS } from '../types'
 import { copyText, quizUrl, slugError, slugify } from '../utils'
-import { deleteQuestion, duplicateQuiz, getQuiz, isSlugTaken, reorderQuestions, saveQuiz, type QuestionRow, type QuizForm } from './api'
+import { deleteQuestion, duplicateQuiz, getQuiz, isSlugTaken, reorderQuestions, saveQuiz, setPublished, type QuestionRow, type QuizForm } from './api'
 
 const props = defineProps<{ id?: string }>()
 const router = useRouter()
@@ -17,6 +18,7 @@ const loading = ref(false)
 const busy = ref(false)
 const error = ref('')
 const newPlayer = ref('')
+const playerError = ref('')
 const slugTouched = ref(false)
 const slugTaken = ref(false)
 const confirmQid = ref<string | null>(null)
@@ -33,9 +35,42 @@ const slugState = computed(() => {
 const base = computed(() => `${window.location.host}${import.meta.env.BASE_URL}`)
 const canSave = computed(() => form.value.name.trim() && !slugProblem.value && !slugTaken.value && !busy.value)
 
+const published = ref(false)
+const publishing = ref(false)
+
+async function togglePublished() {
+  if (!props.id) return
+  publishing.value = true
+  error.value = ''
+  try {
+    await setPublished(props.id, !published.value)
+    published.value = !published.value
+    flash(published.value ? 'Quiz publié : le lien fonctionne' : 'Quiz fermé : le lien affiche « quiz fermé »')
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    publishing.value = false
+  }
+}
+
+// ---------- Modifications non enregistrées ----------
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (dirty.value) {
+    event.preventDefault()
+    event.returnValue = ''
+  }
+}
+onMounted(() => window.addEventListener('beforeunload', beforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', beforeUnload))
+onBeforeRouteLeave(() => {
+  if (!dirty.value) return true
+  return window.confirm('Ce quiz a des modifications non enregistrées. Quitter quand même ?')
+})
+
 async function load() {
   error.value = ''
   if (!props.id) {
+    published.value = false
     form.value = { slug: '', name: '', description: '', players: [] }
     questions.value = []
     saved.value = snapshot()
@@ -47,6 +82,7 @@ async function load() {
     const data = await getQuiz(props.id)
     form.value = data.form
     questions.value = data.questions
+    published.value = data.isPublished
     saved.value = snapshot()
     slugTouched.value = true
   } catch (e) {
@@ -90,7 +126,12 @@ function onSlugInput(event: Event) {
 function addPlayer() {
   const name = newPlayer.value.trim().slice(0, 60)
   if (!name) return
-  if (!form.value.players.includes(name)) form.value.players.push(name)
+  if (form.value.players.some((p) => p.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) {
+    playerError.value = `${name} est déjà dans la liste.`
+    return
+  }
+  playerError.value = ''
+  form.value.players.push(name)
   newPlayer.value = ''
 }
 
@@ -248,7 +289,19 @@ function flash(message: string) {
             />
             <button type="button" class="btn btn-secondary" @click="addPlayer">Ajouter</button>
           </div>
+          <span v-if="playerError" class="error" role="alert">{{ playerError }}</span>
         </div>
+
+        <div v-if="props.id" class="publish-box" :class="{ on: published }">
+          <div class="grow">
+            <strong>{{ published ? 'Quiz publié' : 'Quiz fermé' }}</strong>
+            <p class="small">{{ published ? 'Les joueurs peuvent jouer avec le lien.' : 'Le lien affiche « quiz fermé ». Tu peux le prévisualiser.' }}</p>
+          </div>
+          <button type="button" class="btn" :class="published ? 'btn-secondary' : 'btn-good'" :disabled="publishing" @click="togglePublished">
+            {{ published ? 'Fermer' : 'Publier' }}
+          </button>
+        </div>
+        <p v-else class="small muted">Un nouveau quiz est fermé : publie-le une fois les questions prêtes.</p>
 
         <div class="url-box">
           <label class="label" for="quiz-slug" style="font-weight: 700; font-size: 14px">Adresse du quiz</label>
@@ -295,7 +348,7 @@ function flash(message: string) {
               </span>
               <span class="n">{{ i + 1 }}</span>
               <span class="type">{{ TYPE_LABELS[q.type] }}</span>
-              <span class="text">{{ q.prompt }}</span>
+              <span class="text">{{ plainText(q.prompt) }}</span>
               <span class="q-actions">
                 <button type="button" class="icon-btn move" :disabled="i === 0" :aria-label="`Monter la question ${i + 1}`" @click="moveQuestion(i, i - 1)">↑</button>
                 <button type="button" class="icon-btn move" :disabled="i === questions.length - 1" :aria-label="`Descendre la question ${i + 1}`" @click="moveQuestion(i, i + 1)">↓</button>

@@ -94,6 +94,7 @@ onMounted(load)
         <thead>
           <tr>
             <th>Quiz</th>
+            <th>Statut</th>
             <th>Questions</th>
             <th>Joueurs</th>
             <th>Lien d'accès</th>
@@ -107,6 +108,7 @@ onMounted(load)
                 <RouterLink :to="{ name: 'quiz', params: { id: q.id } }" style="font-weight: 700; color: var(--ink); text-decoration: none">{{ q.name }}</RouterLink>
                 <div v-if="q.description" class="small muted">{{ q.description }}</div>
               </td>
+              <td><span class="status" :class="{ on: q.is_published }">{{ q.is_published ? 'Publié' : 'Fermé' }}</span></td>
               <td class="num">{{ q.questions[0]?.count ?? 0 }}</td>
               <td>{{ playersOf(q) }}</td>
               <td>
@@ -121,7 +123,7 @@ onMounted(load)
               </td>
             </tr>
             <tr v-if="confirmId === q.id">
-              <td colspan="5">
+              <td colspan="6">
                 <div class="confirm" role="alert">
                   <span class="grow">Supprimer « {{ q.name }} » et toutes ses questions ? C'est définitif.</span>
                   <button type="button" class="btn btn-secondary btn-small" @click="confirmId = null">Annuler</button>
@@ -131,7 +133,7 @@ onMounted(load)
             </tr>
           </template>
           <tr v-if="filtered.length === 0">
-            <td colspan="5" class="muted">Aucun quiz ne correspond à « {{ search }} ».</td>
+            <td colspan="6" class="muted">Aucun quiz ne correspond à « {{ search }} ».</td>
           </tr>
         </tbody>
       </table>
@@ -141,7 +143,7 @@ onMounted(load)
       <li v-for="q in filtered" :key="q.id" class="quiz-card">
         <RouterLink :to="{ name: 'quiz', params: { id: q.id } }" class="quiz-card-title">{{ q.name }}</RouterLink>
         <p v-if="q.description" class="small muted">{{ q.description }}</p>
-        <p class="small">{{ q.questions[0]?.count ?? 0 }} questions · {{ playersOf(q) }}</p>
+        <p class="small"><span class="status" :class="{ on: q.is_published }">{{ q.is_published ? 'Publié' : 'Fermé' }}</span> {{ q.questions[0]?.count ?? 0 }} questions · {{ playersOf(q) }}</p>
         <button type="button" class="btn btn-secondary btn-small" style="align-self: flex-start" @click="copy(q.slug)">
           Copier le lien /{{ q.slug }} <Icon name="copy" :size="14" />
         </button>

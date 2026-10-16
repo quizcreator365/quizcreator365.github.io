@@ -98,6 +98,13 @@ drop policy if exists admin_all on public.answers;
 create policy admin_all on public.answers
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
+-- Droits explicites : certains projets Supabase récents ne les accordent plus
+-- par défaut. Les règles d'accès ci-dessus restent appliquées.
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete
+  on public.quizzes, public.players, public.questions, public.answers to authenticated;
+grant execute on function public.is_admin() to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Lecture publique d'un quiz par son adresse
 -- ---------------------------------------------------------------------------

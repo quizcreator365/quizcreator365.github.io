@@ -7,8 +7,9 @@ ton-compte.github.io/voisines.
 
 - Site : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - Données, connexion admin, photos : Supabase (offre gratuite).
-- Version : lot 1. Types de questions disponibles : texte libre, QCM,
-  vrai ou faux, Qui suis-je ?, Quiz photo.
+- Version : lot 2. Tous les types de questions sont disponibles : texte
+  libre, QCM, vrai ou faux, association, chronologie, Qui suis-je ?,
+  Quiz photo.
 
 
 MISE EN ROUTE (une seule fois, environ 20 minutes)
@@ -20,8 +21,11 @@ MISE EN ROUTE (une seule fois, environ 20 minutes)
 1) Sur https://supabase.com, crée un compte puis un projet (région
    conseillée : Paris ou Francfort). Note le mot de passe de la base.
 
-2) Ouvre "SQL Editor", colle le contenu du fichier
-   supabase/migrations/20261014000000_init.sql, puis clique "Run".
+2) Ouvre "SQL Editor" et exécute, dans cet ordre, le contenu de ces
+   fichiers (vide l'éditeur, colle, clique "Run", puis passe au suivant) :
+     supabase/migrations/20261014000000_init.sql
+     supabase/migrations/20261016000000_lot1.sql
+     supabase/migrations/20261017000000_lot2.sql
 
 3) Ouvre "Authentication > Sign In / Providers" et désactive
    "Allow new users to sign up". Ton compte sera ainsi le seul possible.
@@ -40,8 +44,9 @@ MISE EN ROUTE (une seule fois, environ 20 minutes)
    - Redirect URLs : ajoute https://ton-compte.github.io/admin
                      et http://localhost:5173/admin
 
-7) Ouvre "Project Settings > API" et note :
-   - l'URL du projet ;
+7) Ouvre "Project Settings > API" (ou "Data API") et note :
+   - l'URL du projet, de la forme https://xxxxxxxx.supabase.co
+     (rien après ".co" : ni /rest/v1, ni "/") ;
    - la clé publique ("anon" ou "publishable").
    Ne copie jamais la clé "service_role" / "secret" dans le site.
 
@@ -140,6 +145,28 @@ Association (lot 1)   paires justes / nombre de paires
 Chronologie (lot 1)   éléments bien placés / nombre d'éléments
 
 
+PIÈGES À ÉVITER (tirés de la première mise en route)
+===================================================
+
+- Adresse Supabase : uniquement https://xxxxxxxx.supabase.co. Avec
+  /rest/v1 à la fin, la connexion admin échoue ("Invalid path specified
+  in request URL").
+- Variables modifiées sur GitHub : elles ne s'appliquent qu'après une
+  nouvelle publication (Actions > Publier sur GitHub Pages > Run workflow).
+- Ne lance jamais le workflow "pages build and deployment" : il publie
+  les fichiers bruts du dépôt (page blanche à l'accueil, 404 sur /admin).
+  En cas d'erreur, relance "Publier sur GitHub Pages".
+- Envoi par glisser-déposer sur GitHub : envoie le CONTENU du dossier
+  "quiz", pas le dossier lui-même. Le dossier caché .github n'est souvent
+  pas envoyé : vérifie sa présence, sinon crée les fichiers
+  .github/workflows/deploy.yml et keepalive.yml avec "Add file >
+  Create new file".
+- Message "Ton compte n'a pas les droits d'administration" : vérifie que
+  ton email est dans app_admins (étape 5) ; les droits sur les tables sont
+  inclus dans le script initial.
+- Settings > Pages > Source doit rester sur "GitHub Actions".
+
+
 LIMITES CONNUES
 ===============
 
@@ -149,15 +176,18 @@ LIMITES CONNUES
   activité. Le workflow "Garder Supabase actif" l'appelle deux fois
   par semaine.
 - Les adresses de quiz sont servies par 404.html : le jeu fonctionne
-  normalement, mais l'aperçu du lien dans WhatsApp peut être sommaire.
+  normalement, mais l'aperçu du lien dans WhatsApp reste générique
+  ("Un quiz t'attend !") et peut ne pas s'afficher.
+- Un nouveau quiz est fermé tant que tu ne l'as pas publié.
 
 
-PROCHAINS LOTS
-==============
+LOTS
+====
 
 Lot 1 (livré) : Qui suis-je ?, Quiz photo, partage du résultat sur
         WhatsApp, back office sur téléphone, réorganisation des
         questions, aperçu et duplication d'un quiz.
-Lot 2 : association, chronologie, gras et italique, publier ou fermer
-        un quiz.
-Lot 3 : reprise d'une partie interrompue, couleur de fond des questions.
+Lot 2 (livré) : association, chronologie, gras et italique, recadrage
+        des photos, publier ou fermer un quiz, petites corrections.
+Lot 3 : reprise d'une partie interrompue, couleur de fond des questions,
+        import d'une photo à partir d'un lien.

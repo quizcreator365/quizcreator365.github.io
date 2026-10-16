@@ -1,6 +1,9 @@
 import { supabase } from './supabase'
+import { frenchError } from './errors'
 
 export const BUCKET = 'question-images'
+/** Format du cadre photo affiché au joueur (largeur / hauteur). */
+export const PHOTO_RATIO = 4 / 3
 const MAX_SIDE = 1200
 const MAX_INPUT_BYTES = 20 * 1024 * 1024
 
@@ -59,7 +62,7 @@ export async function uploadImage(quizId: string, file: File): Promise<string> {
     cacheControl: '31536000',
     upsert: false,
   })
-  if (error) throw new Error(`Envoi de la photo impossible : ${error.message}`)
+  if (error) throw new Error(`Envoi de la photo impossible : ${frenchError(error.message)}`)
   return path
 }
 

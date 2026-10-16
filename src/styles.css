@@ -240,8 +240,8 @@ ol.qlist .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; t
 }
 
 /* ---------- Lot 1 : photos, aperçu ---------- */
-.question-photo { margin: 0; border-radius: 20px; overflow: hidden; background: var(--ink); display: flex; justify-content: center; }
-.question-photo img { display: block; width: 100%; max-height: 46dvh; object-fit: contain; }
+.question-photo { margin: 0; border-radius: 20px; overflow: hidden; background: var(--ink); aspect-ratio: 4 / 3; width: 100%; max-width: 100%; }
+.question-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .thumb { width: 72px; height: 72px; flex: none; object-fit: cover; border-radius: 14px; background: var(--ink); }
 .preview-banner {
   position: sticky; top: 0; z-index: 5; text-align: center; padding: 8px 12px;
@@ -249,7 +249,7 @@ ol.qlist .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; t
   background: var(--sun); color: var(--ink); font-weight: 700; font-size: 14px;
 }
 .photo-field { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
-.photo-field img, .photo-empty { width: 180px; max-width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); }
+.photo-field img, .photo-empty { width: 220px; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); }
 .photo-empty { display: flex; align-items: center; justify-content: center; color: var(--muted); border-style: dashed; }
 .photo-field .stack { flex: 1 1 200px; }
 
@@ -312,3 +312,68 @@ ol.qlist .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; t
 }
 
 .editor-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ---------- Lot 2 : mise en forme ---------- */
+.rich { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rich-tools { display: flex; gap: 4px; }
+.rich-btn {
+  width: 32px; height: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+  color: var(--ink); cursor: pointer; font-size: 14px; line-height: 1;
+}
+.rich-btn:hover { border-color: var(--primary); }
+.prompt strong, .option strong, .value strong { font-weight: 700; }
+.prop-row .rich, .pair-row .rich, .step-row .rich { flex: 1 1 auto; }
+
+/* ---------- Association et chronologie : saisie ---------- */
+.pair-row, .step-row { display: flex; align-items: flex-end; gap: 8px; }
+.pair-n { width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--primary-soft); color: var(--primary-ink); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-bottom: 11px; }
+.pair-link { color: var(--muted); font-weight: 700; margin-bottom: 13px; }
+.step-date { width: 110px; flex: none; }
+.pair-row .icon-btn, .step-row .q-actions { margin-bottom: 2px; }
+
+/* ---------- Association et chronologie : joueur ---------- */
+.match-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.match-item {
+  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px; width: 100%;
+  background: var(--card); border: 2px solid var(--line); border-radius: 14px;
+  font: inherit; font-size: 16px; color: var(--ink); text-align: left; cursor: pointer;
+}
+.match-item.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.match-item:disabled { cursor: default; }
+.match-badge { width: 26px; height: 26px; flex: none; border-radius: 50%; border: 2px dashed var(--line); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.match-item.active .match-badge { border-color: var(--sun); }
+.chrono-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.chrono-item { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; background: var(--card); border: 2px solid var(--line); border-radius: 14px; }
+.chrono-n { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--primary-soft); color: var(--primary-ink); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.corr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.corr-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); }
+.corr-list li.good { border-color: var(--good); background: var(--good-bg); }
+.corr-list li.bad { border-color: var(--bad); }
+.corr-list .grow { display: flex; flex-direction: column; gap: 2px; }
+.corr-fix { color: var(--bad-ink); }
+.corr-date { font-family: var(--display); font-weight: 600; font-size: 17px; min-width: 52px; }
+.result-card .counts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ---------- Publication ---------- */
+.publish-box { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: var(--bad-bg); color: var(--bad-ink); }
+.publish-box.on { background: var(--good-bg); color: var(--good-ink); }
+.publish-box p { margin-top: 2px; }
+.status { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--bad-bg); color: var(--bad-ink); }
+.status.on { background: var(--good-bg); color: var(--good-ink); }
+
+/* ---------- Recadrage ---------- */
+.crop-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(26, 29, 58, 0.75); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.crop-panel { background: var(--card); border-radius: 18px; padding: 20px; width: min(720px, 100%); max-height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.crop-area { width: 100%; height: min(60dvh, 460px); background: var(--ink); border-radius: 12px; overflow: hidden; }
+.crop-area img { display: block; max-width: 100%; }
+
+@media (max-width: 720px) {
+  .pair-row, .step-row { flex-wrap: wrap; align-items: center; }
+  .pair-row .rich { flex: 1 1 calc(100% - 90px); }
+  .pair-link { display: none; }
+  .step-date { width: calc(100% - 40px); }
+  .step-row .rich { flex: 1 1 100%; }
+  .step-row .q-actions { width: 100%; justify-content: flex-end; }
+  .pair-n { margin-bottom: 0; }
+  .crop-panel { padding: 14px; }
+}

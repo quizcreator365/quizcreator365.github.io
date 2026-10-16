@@ -5,7 +5,16 @@ import { formatScore, type Summary } from '../scoring'
 import { quizUrl } from '../utils'
 import { renderCard, shareResult } from './share'
 
-const props = defineProps<{ quizName: string; quizSlug: string; playerName: string; summary: Summary; answered: number }>()
+const props = defineProps<{ quizName: string; quizSlug: string; playerName: string; summary: Summary; answered: number; showPartial: boolean }>()
+
+/** Message de fin selon la part de points obtenue. */
+function endMessage() {
+  const ratio = props.summary.max ? props.summary.total / props.summary.max : 0
+  if (ratio >= 0.8) return `Bravo ${props.playerName} !`
+  if (ratio >= 0.5) return `Bien joué ${props.playerName} !`
+  if (ratio > 0) return `Pas mal ${props.playerName}, tu feras mieux la prochaine fois !`
+  return `Merci d'avoir joué ${props.playerName} !`
+}
 const emit = defineEmits<{ replay: [] }>()
 
 const card = ref<HTMLElement | null>(null)
@@ -42,7 +51,7 @@ async function share() {
 
 <template>
   <main class="screen">
-    <h1>Bravo {{ playerName }} !</h1>
+    <h1>{{ endMessage() }}</h1>
 
     <section ref="card" class="result-card" aria-label="Ton résultat">
       <div>
@@ -61,9 +70,9 @@ async function share() {
         <div v-if="summary.partial" :style="{ flex: summary.partial, background: 'var(--sun)' }"></div>
         <div v-if="summary.wrong" :style="{ flex: summary.wrong, background: '#f07c73' }"></div>
       </div>
-      <div class="counts">
+      <div class="counts" :class="{ two: !showPartial }">
         <div><b>{{ summary.correct }}</b><span style="color: #a9dcc4">{{ summary.correct > 1 ? 'justes' : 'juste' }}</span></div>
-        <div><b>{{ summary.partial }}</b><span style="color: #ffe08a">{{ summary.partial > 1 ? 'partielles' : 'partielle' }}</span></div>
+        <div v-if="showPartial"><b>{{ summary.partial }}</b><span style="color: #ffe08a">{{ summary.partial > 1 ? 'partielles' : 'partielle' }}</span></div>
         <div><b>{{ summary.wrong }}</b><span style="color: #f7b2ac">{{ summary.wrong > 1 ? 'fausses' : 'fausse' }}</span></div>
       </div>
       <span class="small" style="color: #9ca1c8">{{ answered }} questions répondues sur {{ summary.max }}</span>

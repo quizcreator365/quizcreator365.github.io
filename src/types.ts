@@ -7,8 +7,11 @@ export type QuestionType =
   | 'who_am_i'
   | 'photo'
 
-/** Types disponibles aujourd'hui. Association et chronologie arrivent au lot 2. */
-export const AVAILABLE_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false', 'who_am_i', 'photo']
+/** Types disponibles (tous depuis le lot 2). */
+export const AVAILABLE_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false', 'matching', 'chronology', 'who_am_i', 'photo']
+
+/** Types qui peuvent rapporter des points partiels. */
+export const PARTIAL_TYPES: QuestionType[] = ['matching', 'chronology']
 
 /** Types dont la réponse est un texte libre auto-évalué. */
 export const TEXT_TYPES: QuestionType[] = ['free_text', 'who_am_i', 'photo']

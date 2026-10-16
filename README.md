@@ -4,14 +4,14 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 
 - **Site** : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - **Données, connexion admin, photos** : Supabase (offre gratuite).
-- **Version** : lot 1. Types de questions disponibles : texte libre, QCM, vrai ou faux, Qui suis-je ?, Quiz photo.
+- **Version** : lot 2. Tous les types de questions : texte libre, QCM, vrai ou faux, association, chronologie, Qui suis-je ?, Quiz photo.
 
 ## Mise en route (une seule fois, environ 20 minutes)
 
 ### 1. Créer le projet Supabase
 
 1. Sur [supabase.com](https://supabase.com), crée un compte puis un projet (région conseillée : Paris ou Francfort). Note le mot de passe de la base.
-2. Ouvre **SQL Editor**, colle le contenu de `supabase/migrations/20261014000000_init.sql`, puis clique **Run**.
+2. Ouvre **SQL Editor** et exécute, dans l'ordre, `supabase/migrations/20261014000000_init.sql`, `20261016000000_lot1.sql` puis `20261017000000_lot2.sql`.
 3. Ouvre **Authentication › Sign In / Providers** et désactive **Allow new users to sign up**. Ton compte sera ainsi le seul possible.
 4. Ouvre **Authentication › Users › Add user › Create new user**. Saisis ton email et un mot de passe, et coche **Auto Confirm User**.
 5. Dans **SQL Editor**, donne-toi les droits d'admin (remplace l'email) :
@@ -87,8 +87,10 @@ scripts/spa-fallback.mjs   copie index.html en 404.html pour les adresses /voisi
 - Un projet Supabase gratuit se met en pause après 7 jours sans activité. Le workflow « Garder Supabase actif » l'appelle deux fois par semaine.
 - Les adresses de quiz sont servies par `404.html` : le jeu fonctionne normalement, mais l'aperçu du lien dans WhatsApp peut être sommaire.
 
-## Prochains lots
+## Lots
 
 - **Lot 1 (livré)** : Qui suis-je ?, Quiz photo, partage du résultat sur WhatsApp, back office sur téléphone, réorganisation des questions, aperçu et duplication d'un quiz.
-- **Lot 2** : association, chronologie, gras et italique, publier ou fermer un quiz.
-- **Lot 3** : reprise d'une partie interrompue, couleur de fond des questions.
+- **Lot 2 (livré)** : association, chronologie, gras et italique, recadrage des photos, publier ou fermer un quiz, petites corrections.
+- **Lot 3** : reprise d'une partie interrompue, couleur de fond des questions, import d'une photo à partir d'un lien.
+
+Voir aussi LISEZMOI.txt, section « Pièges à éviter ».

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { renderInline } from '../format'
 import { MAX_TEXT, TEXT_TYPES, type Answer, type PlayerAnswer, type Question } from '../types'
+import ChronologyAnswer from './ChronologyAnswer.vue'
+import MatchingAnswer from './MatchingAnswer.vue'
 
 const props = defineProps<{
   question: Question
-  /** Propositions dans l'ordre d'affichage (mélangées pour le QCM). */
+  /** Propositions dans l'ordre d'affichage (mélangées pour QCM, association, chronologie). */
   options: Answer[]
   modelValue: PlayerAnswer
   readonly?: boolean
@@ -49,11 +52,27 @@ function onText(event: Event) {
       </div>
     </template>
 
+    <MatchingAnswer
+      v-else-if="question.type === 'matching'"
+      :options="options"
+      :model-value="modelValue"
+      :readonly="readonly"
+      @update:model-value="emit('update:modelValue', $event)"
+    />
+
+    <ChronologyAnswer
+      v-else-if="question.type === 'chronology'"
+      :options="options"
+      :model-value="modelValue"
+      :readonly="readonly"
+      @update:model-value="emit('update:modelValue', $event)"
+    />
+
     <template v-else>
       <p v-if="question.type === 'mcq'" class="small muted">
         {{ multiple ? 'Plusieurs réponses sont justes : coche-les toutes.' : 'Une seule réponse est juste.' }}
       </p>
-      <div class="stack" role="group" :aria-label="question.prompt">
+      <div class="stack" role="group" aria-label="Propositions">
         <label
           v-for="option in options"
           :key="option.id"
@@ -67,7 +86,7 @@ function onText(event: Event) {
             :disabled="readonly"
             @click.prevent="toggle(option.id)"
           />
-          <span>{{ option.text }}</span>
+          <span v-html="renderInline(option.text)"></span>
         </label>
       </div>
     </template>

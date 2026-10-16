@@ -1,12 +1,14 @@
 import { supabase } from '../supabase'
 import { removeUnusedImages } from '../images'
-import type { Answer, QuestionType } from '../types'
+import type { QuestionType } from '../types'
+import { frenchError } from '../errors'
 
 export interface QuizRow {
   id: string
   slug: string
   name: string
   description: string | null
+  is_published: boolean
   players: { name: string; position: number }[]
   questions: { count: number }[]
 }
@@ -33,21 +35,26 @@ export interface QuestionForm {
   prompt: string
   more_info: string
   image_path?: string | null
-  answers: Pick<Answer, 'text' | 'is_correct'>[]
+  answers: AnswerForm[]
+}
+
+export interface AnswerForm {
+  text: string
+  is_correct: boolean
+  side?: 'left' | 'right' | null
+  pair_key?: number | null
+  date_label?: string | null
 }
 
 function fail(error: { message: string; code?: string } | null): never | void {
   if (!error) return
-  if (error.code === '23505') throw new Error('Cette adresse est déjà utilisée par un autre quiz.')
-  if (error.code === '42501' || /row-level security/i.test(error.message))
-    throw new Error("Ton compte n'a pas les droits d'administration.")
-  throw new Error(error.message)
+  throw new Error(frenchError(error))
 }
 
 export async function listQuizzes(): Promise<QuizRow[]> {
   const { data, error } = await supabase
     .from('quizzes')
-    .select('id, slug, name, description, players(name, position), questions(count)')
+    .select('id, slug, name, description, is_published, players(name, position), questions(count)')
     .order('created_at', { ascending: false })
   fail(error)
   return (data ?? []) as QuizRow[]
@@ -55,12 +62,12 @@ export async function listQuizzes(): Promise<QuizRow[]> {
 
 export async function getQuiz(id: string) {
   const [quiz, questions] = await Promise.all([
-    supabase.from('quizzes').select('id, slug, name, description, players(id, name, position)').eq('id', id).single(),
+    supabase.from('quizzes').select('id, slug, name, description, is_published, players(id, name, position)').eq('id', id).single(),
     supabase.from('questions').select('id, type, prompt, position').eq('quiz_id', id).order('position').order('created_at'),
   ])
   fail(quiz.error)
   fail(questions.error)
-  const q = quiz.data as { id: string; slug: string; name: string; description: string | null; players: { name: string; position: number }[] }
+  const q = quiz.data as { id: string; slug: string; name: string; description: string | null; is_published: boolean; players: { name: string; position: number }[] }
   return {
     form: {
       id: q.id,
@@ -69,6 +76,7 @@ export async function getQuiz(id: string) {
       description: q.description ?? '',
       players: [...q.players].sort((a, b) => a.position - b.position).map((p) => p.name),
     } as QuizForm,
+    isPublished: q.is_published,
     questions: (questions.data ?? []) as QuestionRow[],
   }
 }
@@ -104,6 +112,11 @@ export async function saveQuiz(form: QuizForm): Promise<string> {
   return id
 }
 
+export async function setPublished(id: string, published: boolean) {
+  const { error } = await supabase.from('quizzes').update({ is_published: published }).eq('id', id)
+  fail(error)
+}
+
 export async function deleteQuiz(id: string) {
   const { data } = await supabase.from('questions').select('image_path').eq('quiz_id', id).not('image_path', 'is', null)
   const { error } = await supabase.from('quizzes').delete().eq('id', id)
@@ -125,13 +138,13 @@ export async function reorderQuestions(quizId: string, ids: string[]) {
 export async function getQuestion(qid: string): Promise<QuestionForm> {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, quiz_id, type, prompt, more_info, image_path, answers(text, is_correct, position)')
+    .select('id, quiz_id, type, prompt, more_info, image_path, answers(text, is_correct, position, side, pair_key, date_label)')
     .eq('id', qid)
     .single()
   fail(error)
   const q = data as {
     id: string; quiz_id: string; type: QuestionType; prompt: string; more_info: string | null
-    image_path: string | null; answers: { text: string; is_correct: boolean; position: number }[]
+    image_path: string | null; answers: (AnswerForm & { position: number })[]
   }
   return {
     id: q.id,
@@ -140,7 +153,9 @@ export async function getQuestion(qid: string): Promise<QuestionForm> {
     prompt: q.prompt,
     more_info: q.more_info ?? '',
     image_path: q.image_path,
-    answers: [...q.answers].sort((a, b) => a.position - b.position).map(({ text, is_correct }) => ({ text, is_correct })),
+    answers: [...q.answers]
+      .sort((a, b) => a.position - b.position)
+      .map(({ text, is_correct, side, pair_key, date_label }) => ({ text, is_correct, side, pair_key, date_label })),
   }
 }
 
