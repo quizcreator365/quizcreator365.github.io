@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { removeUnusedImages } from '../images'
 import type { Answer, QuestionType } from '../types'
 
 export interface QuizRow {
@@ -104,7 +105,20 @@ export async function saveQuiz(form: QuizForm): Promise<string> {
 }
 
 export async function deleteQuiz(id: string) {
+  const { data } = await supabase.from('questions').select('image_path').eq('quiz_id', id).not('image_path', 'is', null)
   const { error } = await supabase.from('quizzes').delete().eq('id', id)
+  fail(error)
+  await removeUnusedImages((data ?? []).map((q) => q.image_path as string))
+}
+
+export async function duplicateQuiz(id: string): Promise<string> {
+  const { data, error } = await supabase.rpc('duplicate_quiz', { p_quiz_id: id })
+  fail(error)
+  return data as string
+}
+
+export async function reorderQuestions(quizId: string, ids: string[]) {
+  const { error } = await supabase.rpc('reorder_questions', { p_quiz_id: quizId, p_ids: ids })
   fail(error)
 }
 
@@ -137,6 +151,8 @@ export async function saveQuestion(form: QuestionForm): Promise<string> {
 }
 
 export async function deleteQuestion(qid: string) {
+  const { data } = await supabase.from('questions').select('image_path').eq('id', qid).maybeSingle()
   const { error } = await supabase.from('questions').delete().eq('id', qid)
   fail(error)
+  await removeUnusedImages([(data as { image_path: string | null } | null)?.image_path])
 }

@@ -7,8 +7,14 @@ export type QuestionType =
   | 'who_am_i'
   | 'photo'
 
-/** Types disponibles dans le MPC. Les autres arrivent au lot 1. */
-export const MPC_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false']
+/** Types disponibles aujourd'hui. Association et chronologie arrivent au lot 2. */
+export const AVAILABLE_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false', 'who_am_i', 'photo']
+
+/** Types dont la réponse est un texte libre auto-évalué. */
+export const TEXT_TYPES: QuestionType[] = ['free_text', 'who_am_i', 'photo']
+
+/** Types qui affichent une photo. */
+export const IMAGE_TYPES: QuestionType[] = ['who_am_i', 'photo']
 
 export const TYPE_LABELS: Record<QuestionType, string> = {
   free_text: 'Texte libre',

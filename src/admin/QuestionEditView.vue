@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { MAX_TEXT, MPC_TYPES, TYPE_LABELS, type QuestionType } from '../types'
+import { imageUrl, removeUnusedImages, uploadImage } from '../images'
+import { AVAILABLE_TYPES, IMAGE_TYPES, MAX_TEXT, TYPE_LABELS, type QuestionType } from '../types'
 import { deleteQuestion, getQuestion, getQuiz, saveQuestion, type QuestionForm, type QuestionRow } from './api'
 
 const props = defineProps<{ id: string; qid?: string }>()
@@ -18,6 +19,10 @@ const busy = ref(false)
 const error = ref('')
 const showErrors = ref(false)
 const confirmDelete = ref(false)
+/** Photo choisie mais pas encore envoyée (envoyée à l'enregistrement). */
+const pendingFile = ref<File | null>(null)
+const pendingPreview = ref<string | null>(null)
+const photoError = ref('')
 
 function defaultAnswers(type: QuestionType): QuestionForm['answers'] {
   if (type === 'true_false') return [{ text: 'Vrai', is_correct: true }, { text: 'Faux', is_correct: false }]
@@ -26,15 +31,17 @@ function defaultAnswers(type: QuestionType): QuestionForm['answers'] {
 }
 
 function blank(type: QuestionType): QuestionForm {
-  return { quiz_id: props.id, type, prompt: '', more_info: '', answers: defaultAnswers(type) }
+  return { quiz_id: props.id, type, prompt: '', more_info: '', image_path: null, answers: defaultAnswers(type) }
 }
 
 const snapshot = () => JSON.stringify(form.value)
-const dirty = computed(() => snapshot() !== saved.value)
+const dirty = computed(() => snapshot() !== saved.value || pendingFile.value !== null)
 const position = computed(() => {
   const i = siblings.value.findIndex((q) => q.id === props.qid)
   return i === -1 ? siblings.value.length : i
 })
+const needsPhoto = computed(() => IMAGE_TYPES.includes(form.value.type))
+const photoSrc = computed(() => pendingPreview.value ?? imageUrl(form.value.image_path))
 
 const problems = computed(() => {
   const f = form.value
@@ -42,7 +49,8 @@ const problems = computed(() => {
   if (!f.prompt.trim()) list.push('Écris la question.')
   if (f.prompt.length > MAX_TEXT || f.more_info.length > MAX_TEXT) list.push(`${MAX_TEXT} caractères au maximum.`)
   const filled = f.answers.filter((a) => a.text.trim())
-  if (f.type === 'free_text' && !filled.length) list.push('Écris la réponse attendue.')
+  if (['free_text', 'who_am_i', 'photo'].includes(f.type) && !filled.length) list.push('Écris la réponse attendue.')
+  if (needsPhoto.value && !f.image_path && !pendingFile.value) list.push('Ajoute une photo.')
   if (f.type === 'mcq') {
     if (filled.length < 2) list.push('Il faut au moins 2 propositions.')
     if (!filled.some((a) => a.is_correct)) list.push('Coche au moins une bonne réponse.')
@@ -51,11 +59,20 @@ const problems = computed(() => {
   return list
 })
 
+function clearPending() {
+  if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value)
+  pendingPreview.value = null
+  pendingFile.value = null
+  photoError.value = ''
+}
+onBeforeUnmount(clearPending)
+
 async function load() {
   loading.value = true
   error.value = ''
   showErrors.value = false
   confirmDelete.value = false
+  clearPending()
   try {
     const quiz = await getQuiz(props.id)
     quizName.value = quiz.form.name
@@ -71,9 +88,17 @@ async function load() {
 watch(() => [props.id, props.qid], load, { immediate: true })
 
 function setType(type: QuestionType) {
-  if (!MPC_TYPES.includes(type) || type === form.value.type) return
+  if (!AVAILABLE_TYPES.includes(type) || type === form.value.type) return
+  const keepText = ['free_text', 'who_am_i', 'photo']
+  const wasText = keepText.includes(form.value.type)
   form.value.type = type
-  form.value.answers = defaultAnswers(type)
+  // Entre texte libre et types photo, la réponse attendue est conservée.
+  if (!(wasText && keepText.includes(type))) form.value.answers = defaultAnswers(type)
+  if (type === 'who_am_i' && !form.value.prompt.trim()) form.value.prompt = 'Qui suis-je ?'
+}
+
+function onTypeSelect(event: Event) {
+  setType((event.target as HTMLSelectElement).value as QuestionType)
 }
 
 function setTrueFalse(i: number) {
@@ -88,7 +113,26 @@ function removeProposition(i: number) {
   form.value.answers.splice(i, 1)
 }
 
-/** Enregistre si besoin. Renvoie l'id de la question, ou null si rien n'est à enregistrer / en cas d'erreur. */
+function onPhoto(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    photoError.value = 'Choisis un fichier image (JPEG, PNG, WebP, HEIC…).'
+    return
+  }
+  clearPending()
+  pendingFile.value = file
+  pendingPreview.value = URL.createObjectURL(file)
+}
+
+function removePhoto() {
+  clearPending()
+  form.value.image_path = null
+}
+
+/** Enregistre si besoin. Renvoie l'id de la question, null s'il n'y a rien à enregistrer, false en cas d'erreur. */
 async function persist(): Promise<string | null | false> {
   const pristineNew = !props.qid && !dirty.value
   if (pristineNew) return null
@@ -99,7 +143,13 @@ async function persist(): Promise<string | null | false> {
   }
   busy.value = true
   error.value = ''
+  const previousImage = JSON.parse(saved.value || '{}').image_path as string | null | undefined
   try {
+    if (pendingFile.value) {
+      form.value.image_path = await uploadImage(props.id, pendingFile.value)
+      clearPending()
+    }
+    if (!IMAGE_TYPES.includes(form.value.type)) form.value.image_path = null
     const payload: QuestionForm = {
       ...form.value,
       id: props.qid,
@@ -112,6 +162,7 @@ async function persist(): Promise<string | null | false> {
     }
     const id = await saveQuestion(payload)
     saved.value = snapshot()
+    if (previousImage && previousImage !== form.value.image_path) await removeUnusedImages([previousImage])
     return id
   } catch (e) {
     error.value = (e as Error).message
@@ -130,7 +181,6 @@ async function goPrevious() {
 async function goNext() {
   const id = await persist()
   if (id === false) return
-  // Recharge l'ordre pour inclure une question qui vient d'être créée.
   const fresh = (await getQuiz(props.id)).questions
   const i = fresh.findIndex((q) => q.id === (id ?? props.qid))
   const next = i === -1 ? undefined : fresh[i + 1]
@@ -155,7 +205,7 @@ async function remove() {
 </script>
 
 <template>
-  <main class="admin-main narrow">
+  <main class="admin-main narrow editor">
     <RouterLink :to="{ name: 'quiz', params: { id } }" class="back">← {{ quizName || 'Quiz' }}</RouterLink>
     <p v-if="loading" class="muted">Chargement…</p>
 
@@ -167,28 +217,52 @@ async function remove() {
 
       <fieldset style="margin: 0; padding: 0; border: 0" class="stack">
         <legend class="label" style="font-weight: 700; font-size: 15px; margin-bottom: 10px">Type de question</legend>
-        <div class="type-picker">
+        <div class="type-picker desktop-only">
           <label
             v-for="t in ALL_TYPES"
             :key="t"
-            :class="{ on: form.type === t, off: !MPC_TYPES.includes(t) }"
-            :title="MPC_TYPES.includes(t) ? '' : 'Disponible au lot 1'"
+            :class="{ on: form.type === t, off: !AVAILABLE_TYPES.includes(t) }"
+            :title="AVAILABLE_TYPES.includes(t) ? '' : 'Disponible au lot 2'"
           >
-            <input type="radio" name="qtype" :checked="form.type === t" :disabled="!MPC_TYPES.includes(t)" @change="setType(t)" />
+            <input type="radio" name="qtype" :checked="form.type === t" :disabled="!AVAILABLE_TYPES.includes(t)" @change="setType(t)" />
             {{ TYPE_LABELS[t] }}
           </label>
         </div>
-        <span class="small muted">Association, Chronologie, Qui suis-je ? et Quiz photo arrivent au lot 1.</span>
+        <select class="input mobile-only" aria-label="Type de question" :value="form.type" @change="onTypeSelect">
+          <option v-for="t in ALL_TYPES" :key="t" :value="t" :disabled="!AVAILABLE_TYPES.includes(t)">
+            {{ TYPE_LABELS[t] }}{{ AVAILABLE_TYPES.includes(t) ? '' : ' (lot 2)' }}
+          </option>
+        </select>
+        <span class="small muted">Association et Chronologie arrivent au lot 2.</span>
       </fieldset>
 
       <section class="panel">
+        <div v-if="needsPhoto" class="field">
+          <span class="label">Photo</span>
+          <div class="photo-field">
+            <img v-if="photoSrc" :src="photoSrc" alt="Aperçu de la photo" />
+            <div v-else class="photo-empty" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="15" rx="2" /><circle cx="12" cy="12.5" r="3.5" /><path d="M8 5l1.5-2h5L16 5" /></svg>
+            </div>
+            <div class="stack" style="gap: 8px">
+              <label class="btn btn-secondary">
+                {{ photoSrc ? 'Changer la photo' : 'Ajouter une photo' }}
+                <input type="file" accept="image/*" class="sr-only" @change="onPhoto" />
+              </label>
+              <button v-if="photoSrc" type="button" class="btn btn-danger btn-small" @click="removePhoto">Retirer la photo</button>
+              <span class="small muted">Sur téléphone, tu peux prendre la photo directement. Elle est réduite avant l'envoi.</span>
+            </div>
+          </div>
+          <span v-if="photoError" class="error">{{ photoError }}</span>
+        </div>
+
         <div class="field">
           <label for="prompt">Question</label>
           <textarea id="prompt" v-model="form.prompt" class="textarea" rows="3" :maxlength="MAX_TEXT"></textarea>
           <span class="counter" :class="{ over: form.prompt.length >= MAX_TEXT }">{{ form.prompt.length }} / {{ MAX_TEXT }}</span>
         </div>
 
-        <div v-if="form.type === 'free_text'" class="field">
+        <div v-if="['free_text', 'who_am_i', 'photo'].includes(form.type)" class="field">
           <label for="reference">Réponse attendue</label>
           <textarea id="reference" v-model="form.answers[0].text" class="textarea" rows="2" :maxlength="MAX_TEXT"></textarea>
           <span class="counter">{{ form.answers[0].text.length }} / {{ MAX_TEXT }}</span>
@@ -235,9 +309,9 @@ async function remove() {
         <button type="button" class="btn btn-danger solid btn-small" @click="remove">Supprimer</button>
       </div>
 
-      <div class="row">
-        <button v-if="qid" type="button" class="btn btn-danger" @click="confirmDelete = true">Supprimer la question</button>
-        <div class="grow"></div>
+      <button v-if="qid" type="button" class="btn btn-danger" style="align-self: flex-start" @click="confirmDelete = true">Supprimer la question</button>
+
+      <div class="editor-actions">
         <button type="button" class="btn btn-secondary" :disabled="busy || position === 0" @click="goPrevious">← Précédente</button>
         <button type="button" class="btn btn-secondary" :disabled="busy" @click="goNext">Suivante →</button>
         <button type="button" class="btn btn-primary" :disabled="busy" @click="finish">{{ busy ? 'Enregistrement…' : 'Terminer' }}</button>

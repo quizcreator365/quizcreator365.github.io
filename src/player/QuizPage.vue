@@ -3,13 +3,19 @@ import { computed, onMounted, ref, watch } from 'vue'
 import Icon from '../Icon.vue'
 import { supabase } from '../supabase'
 import { scoreQuestion, summarize } from '../scoring'
-import { MPC_TYPES, TYPE_LABELS, type Answer, type PlayerAnswer, type Question, type Quiz } from '../types'
+import { AVAILABLE_TYPES, IMAGE_TYPES, TEXT_TYPES, TYPE_LABELS, type Answer, type PlayerAnswer, type Question, type Quiz } from '../types'
 import { shuffle } from '../utils'
+import { imageUrl } from '../images'
+import { useRoute } from 'vue-router'
 import QuestionAnswer from './QuestionAnswer.vue'
 import QuestionCorrection from './QuestionCorrection.vue'
 import ResultView from './ResultView.vue'
 
 const props = defineProps<{ slug: string }>()
+const route = useRoute()
+/** Aperçu ouvert depuis le back office : joueur fictif si besoin, bandeau visible. */
+const preview = computed(() => route.query.apercu !== undefined)
+const PREVIEW_PLAYER = { id: '__apercu__', name: 'Aperçu' }
 
 const status = ref<'loading' | 'notfound' | 'error' | 'ready'>('loading')
 const quiz = ref<Quiz | null>(null)
@@ -21,10 +27,25 @@ const options = ref<Record<string, Answer[]>>({})
 const answers = ref<Record<string, PlayerAnswer>>({})
 
 const questions = computed<Question[]>(() =>
-  (quiz.value?.questions ?? []).filter((q) => MPC_TYPES.includes(q.type)),
+  (quiz.value?.questions ?? []).filter((q) => AVAILABLE_TYPES.includes(q.type)),
 )
 const current = computed(() => questions.value[index.value])
-const player = computed(() => quiz.value?.players.find((p) => p.id === playerId.value))
+const players = computed(() => {
+  const list = quiz.value?.players ?? []
+  return preview.value && list.length === 0 ? [PREVIEW_PLAYER] : list
+})
+const player = computed(() => players.value.find((p) => p.id === playerId.value))
+const currentImage = computed(() =>
+  current.value && IMAGE_TYPES.includes(current.value.type) ? imageUrl(current.value.image_path) : null,
+)
+
+/** Précharge les photos pour qu'elles s'affichent sans attente. */
+function preloadImages() {
+  for (const q of questions.value) {
+    const url = IMAGE_TYPES.includes(q.type) ? imageUrl(q.image_path) : null
+    if (url) new Image().src = url
+  }
+}
 const isLast = computed(() => index.value === questions.value.length - 1)
 const scores = computed(() => questions.value.map((q) => scoreQuestion(q, answers.value[q.id])))
 const summary = computed(() => summarize(scores.value))
@@ -63,10 +84,12 @@ async function load() {
   document.title = quiz.value.name
   status.value = 'ready'
   reset()
+  preloadImages()
+  if (preview.value && !playerId.value) playerId.value = players.value[0]?.id ?? null
 }
 
 function emptyAnswer(q: Question): PlayerAnswer {
-  return q.type === 'free_text' ? { kind: 'text', text: '', selfCorrect: null } : { kind: 'choices', ids: [] }
+  return TEXT_TYPES.includes(q.type) ? { kind: 'text', text: '', selfCorrect: null } : { kind: 'choices', ids: [] }
 }
 
 function reset() {
@@ -141,6 +164,7 @@ onMounted(load)
   </main>
 
   <template v-else-if="quiz">
+    <div v-if="preview" class="preview-banner" role="status">Aperçu du quiz · rien n'est enregistré</div>
     <!-- Choix du joueur -->
     <main v-if="phase === 'pick'" class="screen">
       <div class="hero stack">
@@ -156,7 +180,7 @@ onMounted(load)
         <fieldset class="stack" style="border: 0; padding: 0; margin: 0">
           <legend><h2 style="margin-bottom: 12px">Qui joue ?</h2></legend>
           <label
-            v-for="p in quiz.players"
+            v-for="p in players"
             :key="p.id"
             class="option"
             :class="{ selected: playerId === p.id }"
@@ -173,7 +197,7 @@ onMounted(load)
             <span class="grow">{{ p.name }}</span>
             <input v-model="playerId" type="radio" name="player" :value="p.id" />
           </label>
-          <p v-if="quiz.players.length === 0" class="muted">Aucun joueur n'est inscrit à ce quiz.</p>
+          <p v-if="players.length === 0" class="muted">Aucun joueur n'est inscrit à ce quiz.</p>
         </fieldset>
         <div class="spacer"></div>
         <button type="button" class="btn btn-primary btn-big btn-block" :disabled="!playerId" @click="start">
@@ -223,6 +247,9 @@ onMounted(load)
 
       <template v-else>
         <span class="tag">{{ TYPE_LABELS[current.type] }}</span>
+        <figure v-if="currentImage" class="question-photo">
+          <img :src="currentImage" :alt="current.type === 'who_am_i' ? 'Photo de la personne à trouver' : 'Photo de la question'" />
+        </figure>
         <h1 class="prompt">{{ current.prompt }}</h1>
         <QuestionAnswer
           v-model="answers[current.id]"
@@ -250,6 +277,7 @@ onMounted(load)
     <ResultView
       v-else-if="phase === 'result'"
       :quiz-name="quiz.name"
+      :quiz-slug="quiz.slug"
       :player-name="player?.name ?? ''"
       :summary="summary"
       :answered="questions.length"

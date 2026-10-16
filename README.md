@@ -4,7 +4,7 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 
 - **Site** : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - **Données, connexion admin, photos** : Supabase (offre gratuite).
-- **Version** : MPC. Types de questions disponibles : texte libre, QCM, vrai ou faux.
+- **Version** : lot 1. Types de questions disponibles : texte libre, QCM, vrai ou faux, Qui suis-je ?, Quiz photo.
 
 ## Mise en route (une seule fois, environ 20 minutes)
 
@@ -17,7 +17,8 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 5. Dans **SQL Editor**, donne-toi les droits d'admin (remplace l'email) :
    ```sql
    insert into public.app_admins (user_id)
-   select id from auth.users where email = 'ton@email.fr';
+   select id from auth.users where email = 'ton@email.fr'
+   on conflict do nothing;
    ```
 6. Ouvre **Authentication › URL Configuration** :
    - **Site URL** : `https://ton-compte.github.io`
@@ -27,15 +28,13 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 ### 2. Créer le dépôt GitHub
 
 1. Crée un dépôt public nommé exactement `ton-compte.github.io` (remplace `ton-compte` par ton identifiant GitHub).
-2. Envoie ce dossier dans le dépôt :
-   ```bash
-   git init
-   git add .
-   git commit -m "Quiz des voisines : MPC"
-   git branch -M main
-   git remote add origin https://github.com/ton-compte/ton-compte.github.io.git
-   git push -u origin main
-   ```
+2. Envoie les fichiers du projet dans le dépôt avec [GitHub Desktop](https://desktop.github.com) :
+   - décompresse le zip (dossier `quiz`) ;
+   - dans GitHub Desktop : **File › Clone repository** › `ton-compte.github.io` ;
+   - affiche les fichiers cachés (Mac : Cmd + Maj + . ; Windows : Affichage › Éléments masqués) ;
+   - copie **tout le contenu** du dossier `quiz` (y compris `.github`, `.gitignore`) dans le dossier cloné ;
+   - dans GitHub Desktop : Summary « Quiz des voisines : MPC », **Commit to main**, puis **Push origin** ;
+   - vérifie sur github.com la présence du dossier `.github` et de `package.json` à la racine.
 3. Dans le dépôt, **Settings › Pages › Build and deployment › Source** : choisis **GitHub Actions**.
 4. **Settings › Secrets and variables › Actions › onglet Variables › New repository variable** :
    - `SUPABASE_URL` = l'URL du projet Supabase
@@ -90,6 +89,6 @@ scripts/spa-fallback.mjs   copie index.html en 404.html pour les adresses /voisi
 
 ## Prochains lots
 
-- **Lot 1** : association, chronologie, Qui suis-je ?, Quiz photo (envoi d'images), réorganisation des questions.
-- **Lot 2** : image du résultat partagée sur WhatsApp, prévisualisation, duplication d'un quiz.
-- **Lot 3** : reprise d'une partie interrompue.
+- **Lot 1 (livré)** : Qui suis-je ?, Quiz photo, partage du résultat sur WhatsApp, back office sur téléphone, réorganisation des questions, aperçu et duplication d'un quiz.
+- **Lot 2** : association, chronologie, gras et italique, publier ou fermer un quiz.
+- **Lot 3** : reprise d'une partie interrompue, couleur de fond des questions.

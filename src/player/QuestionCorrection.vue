@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import Icon from '../Icon.vue'
 import { formatScore } from '../scoring'
-import type { Answer, PlayerAnswer, Question } from '../types'
+import { IMAGE_TYPES, TEXT_TYPES, type Answer, type PlayerAnswer, type Question } from '../types'
+import { imageUrl } from '../images'
 
 const props = defineProps<{
   question: Question
@@ -12,7 +13,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ selfEval: [correct: boolean] }>()
 
-const isText = computed(() => props.question.type === 'free_text')
+const isText = computed(() => TEXT_TYPES.includes(props.question.type))
+const photo = computed(() => (IMAGE_TYPES.includes(props.question.type) ? imageUrl(props.question.image_path) : null))
 const selfCorrect = computed(() => (props.answer.kind === 'text' ? props.answer.selfCorrect : null))
 const chosen = computed(() => (props.answer.kind === 'choices' ? props.answer.ids : []))
 const reference = computed(() => props.question.answers.find((a) => a.is_correct)?.text ?? props.question.answers[0]?.text ?? '')
@@ -42,7 +44,10 @@ function optionState(option: Answer) {
       </div>
     </div>
 
-    <p class="prompt" style="font-size: 18px; font-family: var(--body)">{{ question.prompt }}</p>
+    <div class="row" style="flex-wrap: nowrap; align-items: center; gap: 14px">
+      <img v-if="photo" :src="photo" alt="Photo de la question" class="thumb" />
+      <p class="prompt" style="font-size: 18px; font-family: var(--body)">{{ question.prompt }}</p>
+    </div>
 
     <template v-if="isText">
       <div class="answer-box">

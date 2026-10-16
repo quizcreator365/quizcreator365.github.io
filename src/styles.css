@@ -238,3 +238,77 @@ ol.qlist .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; t
   .prop-row { flex-wrap: wrap; }
   .prop-row .check { width: auto; }
 }
+
+/* ---------- Lot 1 : photos, aperçu ---------- */
+.question-photo { margin: 0; border-radius: 20px; overflow: hidden; background: var(--ink); display: flex; justify-content: center; }
+.question-photo img { display: block; width: 100%; max-height: 46dvh; object-fit: contain; }
+.thumb { width: 72px; height: 72px; flex: none; object-fit: cover; border-radius: 14px; background: var(--ink); }
+.preview-banner {
+  position: sticky; top: 0; z-index: 5; text-align: center; padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  background: var(--sun); color: var(--ink); font-weight: 700; font-size: 14px;
+}
+.photo-field { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.photo-field img, .photo-empty { width: 180px; max-width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); }
+.photo-empty { display: flex; align-items: center; justify-content: center; color: var(--muted); border-style: dashed; }
+.photo-field .stack { flex: 1 1 200px; }
+
+/* ---------- Ordre des questions ---------- */
+.drag { cursor: grab; color: #9ca1c8; display: inline-flex; padding: 6px 2px; touch-action: none; }
+.sortable-ghost { opacity: 0.4; }
+.sortable-chosen { background: #f7f8ff; box-shadow: 0 8px 20px rgba(26, 29, 58, 0.12); }
+.q-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.icon-btn.move { color: var(--primary-ink); width: 36px; height: 36px; font-size: 16px; }
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ---------- Cartes quiz (téléphone) ---------- */
+.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.quiz-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.quiz-card-title { font-family: var(--display); font-weight: 600; font-size: 20px; color: var(--ink); text-decoration: none; }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.card-actions > * { flex: 1 1 30%; }
+.search-input { width: 240px; }
+
+.mobile-only { display: none !important; }
+
+/* ---------- Back office sur téléphone ---------- */
+@media (max-width: 720px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: revert !important; }
+  .cards.mobile-only { display: flex !important; }
+  select.mobile-only { display: block !important; }
+
+  .admin-header { padding: 10px 16px; }
+  .admin-header .brand { font-size: 19px; }
+  .admin-header .small { display: none; }
+  .admin-main { padding: 20px 16px 32px; gap: 18px; }
+  .admin h1 { font-size: 26px; }
+  .panel { padding: 16px; }
+  .search-input { width: 100%; }
+  .row:has(> .search-input) { width: 100%; }
+  .row:has(> .search-input) > * { flex: 1 1 100%; }
+
+  .btn { min-height: 44px; }
+  .btn-small { min-height: 44px; padding: 0 12px; }
+  .icon-btn.move { width: 44px; height: 44px; }
+
+  ol.qlist li { flex-wrap: wrap; row-gap: 8px; }
+  ol.qlist .text { flex: 1 1 calc(100% - 80px); white-space: normal; }
+  ol.qlist .type { order: -1; width: auto; }
+  ol.qlist .q-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+
+  .prop-row { flex-wrap: wrap; }
+  .prop-row .input { flex: 1 1 calc(100% - 56px); }
+
+  /* Barre d'actions fixée en bas pendant la saisie */
+  .editor { padding-bottom: 110px; }
+  .editor-actions {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 16px rgba(26, 29, 58, 0.08);
+  }
+  .editor-actions > .btn { flex: 1; padding: 0 8px; }
+}
+
+.editor-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }

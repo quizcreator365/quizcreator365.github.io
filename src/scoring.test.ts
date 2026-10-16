@@ -85,3 +85,13 @@ describe('résumé et affichage', () => {
     expect(formatScore(7 + 1 / 3)).toBe('7,3')
   })
 })
+
+describe('Qui suis-je ? et Quiz photo (auto-évaluation)', () => {
+  it('vaut 1 ou 0 selon l\'auto-évaluation', () => {
+    for (const type of ['who_am_i', 'photo'] as const) {
+      const question = q(type, [{ is_correct: true }])
+      expect(scoreQuestion(question, { kind: 'text', text: 'Grace Kelly', selfCorrect: true })).toBe(1)
+      expect(scoreQuestion(question, { kind: 'text', text: 'Grace Kely', selfCorrect: false })).toBe(0)
+    }
+  })
+})

@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import Icon from '../Icon.vue'
 import { copyText, quizUrl } from '../utils'
-import { deleteQuiz, listQuizzes, type QuizRow } from './api'
+import { useRouter } from 'vue-router'
+import { deleteQuiz, duplicateQuiz, listQuizzes, type QuizRow } from './api'
 
 const quizzes = ref<QuizRow[]>([])
 const loading = ref(true)
@@ -10,6 +11,21 @@ const error = ref('')
 const search = ref('')
 const confirmId = ref<string | null>(null)
 const toast = ref('')
+const router = useRouter()
+const busyId = ref<string | null>(null)
+
+async function duplicate(id: string) {
+  busyId.value = id
+  error.value = ''
+  try {
+    const newId = await duplicateQuiz(id)
+    await router.push({ name: 'quiz', params: { id: newId } })
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    busyId.value = null
+  }
+}
 
 const filtered = computed(() => {
   const s = search.value.trim().toLowerCase()
@@ -58,7 +74,7 @@ onMounted(load)
       <h1>Mes quiz</h1>
       <div class="row">
         <label class="sr-only" for="search">Rechercher un quiz</label>
-        <input id="search" v-model="search" class="input" type="search" placeholder="Rechercher un quiz" style="width: 240px" />
+        <input id="search" v-model="search" type="search" placeholder="Rechercher un quiz" class="input search-input" />
         <RouterLink class="btn btn-primary" :to="{ name: 'quiz-new' }">+ Nouveau quiz</RouterLink>
       </div>
     </div>
@@ -72,7 +88,8 @@ onMounted(load)
       <RouterLink class="btn btn-primary" style="align-self: flex-start" :to="{ name: 'quiz-new' }">Créer un quiz</RouterLink>
     </div>
 
-    <div v-else class="table-wrap">
+    <template v-else>
+    <div class="table-wrap desktop-only">
       <table class="list">
         <thead>
           <tr>
@@ -99,6 +116,7 @@ onMounted(load)
               </td>
               <td style="text-align: right; white-space: nowrap">
                 <RouterLink class="btn btn-ghost btn-small" :to="{ name: 'quiz', params: { id: q.id } }">Modifier</RouterLink>
+                <button type="button" class="btn btn-ghost btn-small" :disabled="busyId === q.id" @click="duplicate(q.id)">Dupliquer</button>
                 <button type="button" class="btn btn-danger btn-small" @click="confirmId = q.id">Supprimer</button>
               </td>
             </tr>
@@ -118,6 +136,29 @@ onMounted(load)
         </tbody>
       </table>
     </div>
+
+    <ul class="cards mobile-only">
+      <li v-for="q in filtered" :key="q.id" class="quiz-card">
+        <RouterLink :to="{ name: 'quiz', params: { id: q.id } }" class="quiz-card-title">{{ q.name }}</RouterLink>
+        <p v-if="q.description" class="small muted">{{ q.description }}</p>
+        <p class="small">{{ q.questions[0]?.count ?? 0 }} questions · {{ playersOf(q) }}</p>
+        <button type="button" class="btn btn-secondary btn-small" style="align-self: flex-start" @click="copy(q.slug)">
+          Copier le lien /{{ q.slug }} <Icon name="copy" :size="14" />
+        </button>
+        <div class="card-actions">
+          <RouterLink class="btn btn-primary" :to="{ name: 'quiz', params: { id: q.id } }">Modifier</RouterLink>
+          <button type="button" class="btn btn-secondary" :disabled="busyId === q.id" @click="duplicate(q.id)">Dupliquer</button>
+          <button type="button" class="btn btn-danger" @click="confirmId = q.id">Supprimer</button>
+        </div>
+        <div v-if="confirmId === q.id" class="confirm" role="alert">
+          <span class="grow">Supprimer « {{ q.name }} » et toutes ses questions ?</span>
+          <button type="button" class="btn btn-secondary btn-small" @click="confirmId = null">Annuler</button>
+          <button type="button" class="btn btn-danger solid btn-small" @click="remove(q.id)">Supprimer</button>
+        </div>
+      </li>
+      <li v-if="filtered.length === 0" class="muted">Aucun quiz ne correspond à « {{ search }} ».</li>
+    </ul>
+    </template>
     <div v-if="toast" class="toast" role="status">{{ toast }}</div>
   </main>
 </template>

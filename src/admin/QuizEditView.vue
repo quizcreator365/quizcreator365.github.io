@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import Sortable from 'sortablejs'
 import { useRouter } from 'vue-router'
 import Icon from '../Icon.vue'
 import { TYPE_LABELS } from '../types'
 import { copyText, quizUrl, slugError, slugify } from '../utils'
-import { deleteQuestion, getQuiz, isSlugTaken, saveQuiz, type QuestionRow, type QuizForm } from './api'
+import { deleteQuestion, duplicateQuiz, getQuiz, isSlugTaken, reorderQuestions, saveQuiz, type QuestionRow, type QuizForm } from './api'
 
 const props = defineProps<{ id?: string }>()
 const router = useRouter()
@@ -131,6 +132,71 @@ async function removeQuestion(qid: string) {
   }
 }
 
+// ---------- Ordre des questions ----------
+const listEl = ref<HTMLOListElement | null>(null)
+let sortable: Sortable | null = null
+
+watch(
+  () => [listEl.value, questions.value.length] as const,
+  async () => {
+    await nextTick()
+    if (listEl.value && !sortable) {
+      sortable = Sortable.create(listEl.value, {
+        handle: '.drag',
+        animation: 150,
+        onEnd(evt) {
+          const { oldIndex, newIndex, item, from } = evt
+          if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
+          // Vue garde la main sur le DOM : on annule le déplacement de Sortable puis on met à jour la liste.
+          from.removeChild(item)
+          from.insertBefore(item, from.children[oldIndex] ?? null)
+          moveQuestion(oldIndex, newIndex)
+        },
+      })
+    }
+    if (!listEl.value && sortable) {
+      sortable.destroy()
+      sortable = null
+    }
+  },
+)
+onBeforeUnmount(() => sortable?.destroy())
+
+async function moveQuestion(from: number, to: number) {
+  if (!props.id || to < 0 || to >= questions.value.length) return
+  const before = [...questions.value]
+  const list = [...questions.value]
+  const [moved] = list.splice(from, 1)
+  list.splice(to, 0, moved)
+  questions.value = list
+  try {
+    await reorderQuestions(props.id, list.map((q) => q.id))
+    flash('Ordre enregistré')
+  } catch (e) {
+    questions.value = before
+    error.value = (e as Error).message
+  }
+}
+
+// ---------- Duplication et aperçu ----------
+const duplicating = ref(false)
+async function duplicate() {
+  if (!props.id) return
+  duplicating.value = true
+  error.value = ''
+  try {
+    const id = await duplicateQuiz(props.id)
+    flash('Copie créée')
+    await router.push({ name: 'quiz', params: { id } })
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    duplicating.value = false
+  }
+}
+
+const previewUrl = computed(() => `${quizUrl(form.value.slug)}?apercu`)
+
 async function copyLink() {
   const ok = await copyText(quizUrl(form.value.slug))
   flash(ok ? 'Lien copié' : 'Copie impossible : sélectionne le lien à la main')
@@ -203,13 +269,17 @@ function flash(message: string) {
         <button class="btn btn-primary" type="submit" :disabled="!canSave || (!dirty && !!props.id)">
           {{ busy ? 'Enregistrement…' : dirty || !props.id ? 'Enregistrer' : 'Enregistré' }}
         </button>
+        <button v-if="props.id" type="button" class="btn btn-secondary" :disabled="duplicating || dirty" @click="duplicate">
+          {{ duplicating ? 'Copie en cours…' : 'Dupliquer ce quiz' }}
+        </button>
+        <span v-if="props.id && dirty" class="small muted">Enregistre tes modifications pour dupliquer ou prévisualiser.</span>
       </form>
 
       <section class="panel main">
         <div class="row" style="justify-content: space-between">
           <h2>Questions <span class="small muted" style="font-family: var(--body); font-weight: 400">· {{ questions.length }}</span></h2>
           <div class="row">
-            <a v-if="props.id" class="btn btn-ghost btn-small" :href="quizUrl(form.slug)" target="_blank" rel="noopener">Ouvrir le quiz ↗</a>
+            <a v-if="props.id && !dirty" class="btn btn-ghost btn-small" :href="previewUrl" target="_blank" rel="noopener">Prévisualiser ↗</a>
             <button type="button" class="btn btn-primary btn-small" :disabled="!canSave" @click="addQuestion">+ Ajouter une question</button>
           </div>
         </div>
@@ -217,22 +287,30 @@ function flash(message: string) {
         <p v-if="!props.id" class="muted">Enregistre le quiz, puis ajoute ses questions.</p>
         <p v-else-if="questions.length === 0" class="muted">Pas encore de question.</p>
 
-        <ol v-else class="qlist">
-          <template v-for="(q, i) in questions" :key="q.id">
-            <li>
+        <template v-else>
+          <ol ref="listEl" class="qlist">
+            <li v-for="(q, i) in questions" :key="q.id">
+              <span class="drag" title="Glisser pour déplacer" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" /></svg>
+              </span>
               <span class="n">{{ i + 1 }}</span>
               <span class="type">{{ TYPE_LABELS[q.type] }}</span>
               <span class="text">{{ q.prompt }}</span>
-              <RouterLink class="btn btn-ghost btn-small" :to="{ name: 'question', params: { id: props.id, qid: q.id } }">Modifier</RouterLink>
-              <button type="button" class="btn btn-danger btn-small" :aria-label="`Supprimer la question ${i + 1}`" @click="confirmQid = q.id">Supprimer</button>
+              <span class="q-actions">
+                <button type="button" class="icon-btn move" :disabled="i === 0" :aria-label="`Monter la question ${i + 1}`" @click="moveQuestion(i, i - 1)">↑</button>
+                <button type="button" class="icon-btn move" :disabled="i === questions.length - 1" :aria-label="`Descendre la question ${i + 1}`" @click="moveQuestion(i, i + 1)">↓</button>
+                <RouterLink class="btn btn-ghost btn-small" :to="{ name: 'question', params: { id: props.id, qid: q.id } }">Modifier</RouterLink>
+                <button type="button" class="btn btn-danger btn-small" :aria-label="`Supprimer la question ${i + 1}`" @click="confirmQid = q.id">Supprimer</button>
+              </span>
             </li>
-            <li v-if="confirmQid === q.id" class="confirm" role="alert" style="border: 0">
-              <span class="grow">Supprimer la question {{ i + 1 }} ?</span>
-              <button type="button" class="btn btn-secondary btn-small" @click="confirmQid = null">Annuler</button>
-              <button type="button" class="btn btn-danger solid btn-small" @click="removeQuestion(q.id)">Supprimer</button>
-            </li>
-          </template>
-        </ol>
+          </ol>
+          <div v-if="confirmQid" class="confirm" role="alert">
+            <span class="grow">Supprimer la question {{ questions.findIndex((q) => q.id === confirmQid) + 1 }} ?</span>
+            <button type="button" class="btn btn-secondary btn-small" @click="confirmQid = null">Annuler</button>
+            <button type="button" class="btn btn-danger solid btn-small" @click="confirmQid && removeQuestion(confirmQid)">Supprimer</button>
+          </div>
+          <p class="small muted">Glisse les questions par la poignée ⋮⋮ ou utilise les flèches pour changer l'ordre.</p>
+        </template>
       </section>
     </div>
     <div v-if="toast" class="toast" role="status">{{ toast }}</div>

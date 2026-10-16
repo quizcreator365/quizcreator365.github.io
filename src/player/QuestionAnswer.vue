@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { MAX_TEXT, type Answer, type PlayerAnswer, type Question } from '../types'
+import { MAX_TEXT, TEXT_TYPES, type Answer, type PlayerAnswer, type Question } from '../types'
 
 const props = defineProps<{
   question: Question
@@ -32,7 +32,7 @@ function onText(event: Event) {
 
 <template>
   <div class="stack">
-    <template v-if="question.type === 'free_text'">
+    <template v-if="TEXT_TYPES.includes(question.type)">
       <div class="field">
         <label :for="`answer-${question.id}`">Ta réponse</label>
         <textarea
