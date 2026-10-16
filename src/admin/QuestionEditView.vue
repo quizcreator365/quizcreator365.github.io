@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { imageUrl, removeUnusedImages, uploadImage } from '../images'
+import { fetchImageFromUrl, imageUrl, removeUnusedImages, uploadImage } from '../images'
+import { isValidColor, needsLightText, toHex } from '../colors'
+import { renderInline } from '../format'
 import { AVAILABLE_TYPES, IMAGE_TYPES, MAX_TEXT, TEXT_TYPES, TYPE_LABELS, type QuestionType } from '../types'
 import { deleteQuestion, getQuestion, getQuiz, saveQuestion, type AnswerForm, type QuestionForm, type QuestionRow } from './api'
 import ImageCropper from './ImageCropper.vue'
@@ -43,7 +45,7 @@ function defaultAnswers(type: QuestionType): AnswerForm[] {
 }
 
 function blank(type: QuestionType): QuestionForm {
-  return { quiz_id: props.id, type, prompt: '', more_info: '', image_path: null, answers: defaultAnswers(type) }
+  return { quiz_id: props.id, type, prompt: '', more_info: '', image_path: null, background_color: '', answers: defaultAnswers(type) }
 }
 
 function resetStructured(type: QuestionType) {
@@ -93,6 +95,35 @@ const needsPhoto = computed(() => IMAGE_TYPES.includes(form.value.type))
 const isText = computed(() => TEXT_TYPES.includes(form.value.type))
 const photoSrc = computed(() => pendingPreview.value ?? imageUrl(form.value.image_path))
 
+// ---------- Couleur de fond ----------
+const colorValid = computed(() => isValidColor(form.value.background_color ?? ''))
+const colorHex = computed(() => (colorValid.value ? toHex(form.value.background_color ?? '') : null))
+const previewStyle = computed(() => {
+  const hex = colorHex.value
+  if (!hex) return {}
+  return { background: hex, color: needsLightText(hex) ? '#ffffff' : '#1a1d3a' }
+})
+function onPickColor(event: Event) {
+  form.value.background_color = (event.target as HTMLInputElement).value
+}
+
+// ---------- Photo à partir d'un lien ----------
+const photoLink = ref('')
+const importing = ref(false)
+async function importFromLink() {
+  photoError.value = ''
+  importing.value = true
+  try {
+    const blob = await fetchImageFromUrl(photoLink.value)
+    cropSrc.value = URL.createObjectURL(blob)
+    photoLink.value = ''
+  } catch (e) {
+    photoError.value = (e as Error).message
+  } finally {
+    importing.value = false
+  }
+}
+
 const problems = computed(() => {
   const f = form.value
   const list: string[] = []
@@ -111,6 +142,7 @@ const problems = computed(() => {
     if (pairs.value.filter((p) => p.left.trim() && p.right.trim()).length < 2) list.push('Il faut au moins 2 paires.')
   }
   if (f.type === 'chronology' && steps.value.filter((s) => s.text.trim()).length < 2) list.push('Il faut au moins 2 éléments à classer.')
+  if (!colorValid.value) list.push('Couleur inconnue : utilise un nom HTML (ex. lightblue) ou un code HEX (ex. #ADD8E6).')
   return list
 })
 
@@ -251,6 +283,7 @@ async function persist(): Promise<string | null | false> {
       quiz_id: props.id,
       prompt: form.value.prompt.trim(),
       more_info: form.value.more_info.trim(),
+      background_color: (form.value.background_color ?? '').trim(),
       answers: buildAnswers(),
     })
     clearPending()
@@ -353,6 +386,13 @@ async function remove() {
               <span class="small muted">Tu cadres la photo juste après l'avoir choisie. Sur téléphone, tu peux la prendre directement.</span>
             </div>
           </div>
+          <form class="link-import" @submit.prevent="importFromLink">
+            <label for="photo-link" class="small" style="font-weight: 700">Ou colle l'adresse d'une image</label>
+            <div class="row" style="flex-wrap: nowrap">
+              <input id="photo-link" v-model="photoLink" class="input" type="url" inputmode="url" placeholder="https://…/photo.jpg" />
+              <button type="submit" class="btn btn-secondary" :disabled="importing || !photoLink.trim()">{{ importing ? 'Import…' : 'Importer' }}</button>
+            </div>
+          </form>
           <span v-if="photoError" class="error">{{ photoError }}</span>
         </div>
 
@@ -427,6 +467,33 @@ async function remove() {
         <div class="field">
           <label for="more">En savoir plus <span class="muted" style="font-weight: 400">(facultatif)</span></label>
           <RichField id="more" v-model="form.more_info" multiline :rows="3" counter aria-label="En savoir plus" />
+        </div>
+
+        <div class="field">
+          <label for="bgcolor">Couleur de fond <span class="muted" style="font-weight: 400">(facultatif)</span></label>
+          <div class="color-row">
+            <input
+              id="bgcolor"
+              v-model="form.background_color"
+              class="input"
+              :class="{ invalid: !colorValid }"
+              maxlength="40"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="lightblue ou #ADD8E6"
+              aria-describedby="bgcolor-help"
+            />
+            <input type="color" class="color-picker" :value="colorHex ?? '#ffffff'" aria-label="Choisir une couleur" @input="onPickColor" />
+            <button v-if="form.background_color" type="button" class="btn btn-ghost btn-small" @click="form.background_color = ''">Aucune</button>
+          </div>
+          <span id="bgcolor-help" class="small" :class="colorValid ? 'muted' : 'error'">
+            {{ colorValid ? 'Nom de couleur HTML (lightblue, gold…) ou code HEX (#ADD8E6). Vide : fond habituel.' : 'Couleur inconnue : vérifie l’orthographe (en anglais) ou le code HEX.' }}
+          </span>
+          <div class="color-preview" :style="previewStyle" aria-label="Aperçu côté joueur">
+            <span class="tag">{{ TYPE_LABELS[form.type] }}</span>
+            <p class="prompt" style="font-size: 18px" v-html="renderInline(form.prompt) || 'Ta question s’affichera ici'"></p>
+            <span class="small" style="opacity: 0.8">Aperçu côté joueur</span>
+          </div>
         </div>
 
         <ul v-if="showErrors && problems.length" class="error" role="alert" style="margin: 0; padding-left: 18px">

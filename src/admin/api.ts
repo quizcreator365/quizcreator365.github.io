@@ -35,6 +35,7 @@ export interface QuestionForm {
   prompt: string
   more_info: string
   image_path?: string | null
+  background_color?: string | null
   answers: AnswerForm[]
 }
 
@@ -138,13 +139,13 @@ export async function reorderQuestions(quizId: string, ids: string[]) {
 export async function getQuestion(qid: string): Promise<QuestionForm> {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, quiz_id, type, prompt, more_info, image_path, answers(text, is_correct, position, side, pair_key, date_label)')
+    .select('id, quiz_id, type, prompt, more_info, image_path, background_color, answers(text, is_correct, position, side, pair_key, date_label)')
     .eq('id', qid)
     .single()
   fail(error)
   const q = data as {
     id: string; quiz_id: string; type: QuestionType; prompt: string; more_info: string | null
-    image_path: string | null; answers: (AnswerForm & { position: number })[]
+    image_path: string | null; background_color: string | null; answers: (AnswerForm & { position: number })[]
   }
   return {
     id: q.id,
@@ -153,6 +154,7 @@ export async function getQuestion(qid: string): Promise<QuestionForm> {
     prompt: q.prompt,
     more_info: q.more_info ?? '',
     image_path: q.image_path,
+    background_color: q.background_color ?? '',
     answers: [...q.answers]
       .sort((a, b) => a.position - b.position)
       .map(({ text, is_correct, side, pair_key, date_label }) => ({ text, is_correct, side, pair_key, date_label })),

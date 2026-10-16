@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Icon from '../Icon.vue'
 import { supabase } from '../supabase'
 import { scoreQuestion, summarize } from '../scoring'
@@ -7,6 +7,7 @@ import { AVAILABLE_TYPES, IMAGE_TYPES, PARTIAL_TYPES, TEXT_TYPES, TYPE_LABELS, t
 import { shuffle } from '../utils'
 import { imageUrl } from '../images'
 import { renderInline } from '../format'
+import { isValidColor, needsLightText, toHex } from '../colors'
 import { useRoute } from 'vue-router'
 import QuestionAnswer from './QuestionAnswer.vue'
 import QuestionCorrection from './QuestionCorrection.vue'
@@ -98,6 +99,7 @@ async function load() {
   const last = readLastPlayer()
   playerId.value = players.value.find((p) => p.name === last)?.id ?? null
   if (preview.value && !playerId.value) playerId.value = players.value[0]?.id ?? null
+  resumable.value = preview.value ? null : readGame()
 }
 
 const storageKey = () => `quiz:dernier-joueur:${props.slug}`
@@ -157,6 +159,7 @@ function reset() {
 
 function start() {
   if (!playerId.value) return
+  clearGame()
   if (player.value && player.value.id !== PREVIEW_PLAYER.id) saveLastPlayer(player.value.name)
   reset()
   phase.value = 'play'
@@ -184,8 +187,111 @@ function next() {
 }
 
 function replay() {
+  clearGame()
   reset()
   phase.value = 'pick'
+}
+
+// ---------- Couleur de fond de la question ----------
+const background = computed(() => {
+  const c = current.value?.background_color ?? ''
+  return phase.value === 'play' && c && isValidColor(c) ? toHex(c) : null
+})
+const lightText = computed(() => (background.value ? needsLightText(background.value) : false))
+watch(background, (hex) => {
+  document.body.style.background = hex ?? ''
+}, { immediate: true })
+onBeforeUnmount(() => {
+  document.body.style.background = ''
+})
+
+// ---------- Reprise d'une partie interrompue ----------
+interface SavedGame {
+  v: 1
+  qids: string
+  player: string
+  index: number
+  stage: 'answer' | 'correction'
+  answers: Record<string, PlayerAnswer>
+  options: Record<string, string[]>
+  at: number
+}
+const gameKey = () => `quiz:partie:${props.slug}`
+const resumable = ref<SavedGame | null>(null)
+const MAX_AGE = 7 * 24 * 3600 * 1000
+
+function questionIds() {
+  return questions.value.map((q) => q.id).join(',')
+}
+
+function readGame(): SavedGame | null {
+  try {
+    const g = JSON.parse(localStorage.getItem(gameKey()) ?? 'null') as SavedGame | null
+    if (!g || g.v !== 1 || g.qids !== questionIds() || Date.now() - g.at > MAX_AGE) return null
+    if (!players.value.some((p) => p.name === g.player)) return null
+    return g
+  } catch {
+    return null
+  }
+}
+
+function saveGame() {
+  if (preview.value || phase.value !== 'play' || !player.value) return
+  const g: SavedGame = {
+    v: 1,
+    qids: questionIds(),
+    player: player.value.name,
+    index: index.value,
+    stage: stage.value === 'answer' ? 'answer' : 'correction',
+    answers: answers.value,
+    options: Object.fromEntries(Object.entries(options.value).map(([k, list]) => [k, list.map((a) => a.id)])),
+    at: Date.now(),
+  }
+  try {
+    localStorage.setItem(gameKey(), JSON.stringify(g))
+  } catch {
+    /* navigation privée : la reprise ne sera pas possible */
+  }
+}
+
+function clearGame() {
+  resumable.value = null
+  try {
+    localStorage.removeItem(gameKey())
+  } catch {
+    /* rien à faire */
+  }
+}
+
+watch([answers, index, stage, phase], saveGame, { deep: true })
+watch(phase, (p) => {
+  if (p === 'result') clearGame()
+})
+
+function resume() {
+  const g = resumable.value
+  if (!g) return
+  const opts: Record<string, Answer[]> = {}
+  for (const q of questions.value) {
+    const byId = new Map(q.answers.map((a) => [a.id, a]))
+    const list = (g.options[q.id] ?? []).map((id) => byId.get(id))
+    if (list.length !== q.answers.length || list.some((a) => !a)) {
+      clearGame()
+      return
+    }
+    opts[q.id] = list as Answer[]
+  }
+  playerId.value = players.value.find((p) => p.name === g.player)?.id ?? null
+  options.value = opts
+  answers.value = g.answers
+  index.value = Math.min(g.index, questions.value.length - 1)
+  stage.value = g.stage
+  resumable.value = null
+  phase.value = 'play'
+}
+
+function restart() {
+  clearGame()
 }
 
 watch(() => props.slug, load)
@@ -235,6 +341,12 @@ onMounted(load)
       <template v-if="questions.length === 0">
         <p class="banner info">Ce quiz n'a pas encore de questions. Reviens plus tard !</p>
       </template>
+      <div v-else-if="resumable" class="resume-box" role="region" aria-label="Partie en cours">
+        <h2>Tu avais commencé ce quiz</h2>
+        <p>{{ resumable.player }} en était à la question {{ resumable.index + 1 }} sur {{ questions.length }}.</p>
+        <button type="button" class="btn btn-primary btn-big btn-block" @click="resume">Reprendre la partie</button>
+        <button type="button" class="btn btn-secondary btn-block" @click="restart">Recommencer à zéro</button>
+      </div>
       <template v-else>
         <fieldset class="stack" style="border: 0; padding: 0; margin: 0">
           <legend><h2 style="margin-bottom: 12px">Qui joue ?</h2></legend>
@@ -266,7 +378,7 @@ onMounted(load)
     </main>
 
     <!-- Questions -->
-    <main v-else-if="phase === 'play' && current" class="screen">
+    <main v-else-if="phase === 'play' && current" class="screen" :class="{ 'on-color': background, 'on-dark': lightText }">
       <div class="stack" style="gap: 10px">
         <div class="topline">
           <span><b>Question {{ index + 1 }}</b> <span class="muted">/ {{ questions.length }}</span></span>

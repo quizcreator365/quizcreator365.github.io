@@ -4,14 +4,14 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 
 - **Site** : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - **Données, connexion admin, photos** : Supabase (offre gratuite).
-- **Version** : lot 2. Tous les types de questions : texte libre, QCM, vrai ou faux, association, chronologie, Qui suis-je ?, Quiz photo.
+- **Version** : lot 3. Tous les types de questions, reprise d'une partie interrompue, couleur de fond des questions, import de photo par lien.
 
 ## Mise en route (une seule fois, environ 20 minutes)
 
 ### 1. Créer le projet Supabase
 
 1. Sur [supabase.com](https://supabase.com), crée un compte puis un projet (région conseillée : Paris ou Francfort). Note le mot de passe de la base.
-2. Ouvre **SQL Editor** et exécute, dans l'ordre, `supabase/migrations/20261014000000_init.sql`, `20261016000000_lot1.sql` puis `20261017000000_lot2.sql`.
+2. Ouvre **SQL Editor** et exécute, dans l'ordre, `supabase/migrations/20261014000000_init.sql`, `20261016000000_lot1.sql`, `20261017000000_lot2.sql` puis `20261018000000_lot3.sql`, puis installe la fonction `supabase/functions/import-image` (voir MISE-A-JOUR-LOT3.txt).
 3. Ouvre **Authentication › Sign In / Providers** et désactive **Allow new users to sign up**. Ton compte sera ainsi le seul possible.
 4. Ouvre **Authentication › Users › Add user › Create new user**. Saisis ton email et un mot de passe, et coche **Auto Confirm User**.
 5. Dans **SQL Editor**, donne-toi les droits d'admin (remplace l'email) :
@@ -91,6 +91,6 @@ scripts/spa-fallback.mjs   copie index.html en 404.html pour les adresses /voisi
 
 - **Lot 1 (livré)** : Qui suis-je ?, Quiz photo, partage du résultat sur WhatsApp, back office sur téléphone, réorganisation des questions, aperçu et duplication d'un quiz.
 - **Lot 2 (livré)** : association, chronologie, gras et italique, recadrage des photos, publier ou fermer un quiz, petites corrections.
-- **Lot 3** : reprise d'une partie interrompue, couleur de fond des questions, import d'une photo à partir d'un lien.
+- **Lot 3 (livré)** : reprise d'une partie interrompue, couleur de fond des questions, import d'une photo à partir d'un lien.
 
 Voir aussi LISEZMOI.txt, section « Pièges à éviter ».

@@ -7,9 +7,8 @@ ton-compte.github.io/voisines.
 
 - Site : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - Données, connexion admin, photos : Supabase (offre gratuite).
-- Version : lot 2. Tous les types de questions sont disponibles : texte
-  libre, QCM, vrai ou faux, association, chronologie, Qui suis-je ?,
-  Quiz photo.
+- Version : lot 3. Tous les types de questions, reprise d'une partie
+  interrompue, couleur de fond des questions, import de photo par lien.
 
 
 MISE EN ROUTE (une seule fois, environ 20 minutes)
@@ -26,6 +25,9 @@ MISE EN ROUTE (une seule fois, environ 20 minutes)
      supabase/migrations/20261014000000_init.sql
      supabase/migrations/20261016000000_lot1.sql
      supabase/migrations/20261017000000_lot2.sql
+     supabase/migrations/20261018000000_lot3.sql
+   Puis installe la fonction d'import de photos par lien : voir
+   MISE-A-JOUR-LOT3.txt, étape 2.
 
 3) Ouvre "Authentication > Sign In / Providers" et désactive
    "Allow new users to sign up". Ton compte sera ainsi le seul possible.
@@ -127,7 +129,8 @@ src/admin/                  back office : connexion, liste des quiz,
 src/scoring.ts              calcul des points (testé dans scoring.test.ts)
 src/types.ts                types de questions et de réponses
 supabase/migrations/        tables, règles d'accès, fonctions get_quiz
-                            et save_question
+                            et save_question (un script par lot)
+supabase/functions/         fonction import-image (photo par lien)
 .github/workflows/          publication sur GitHub Pages, réveil
                             hebdomadaire de Supabase
 scripts/spa-fallback.mjs    copie index.html en 404.html pour que les
@@ -189,5 +192,5 @@ Lot 1 (livré) : Qui suis-je ?, Quiz photo, partage du résultat sur
         questions, aperçu et duplication d'un quiz.
 Lot 2 (livré) : association, chronologie, gras et italique, recadrage
         des photos, publier ou fermer un quiz, petites corrections.
-Lot 3 : reprise d'une partie interrompue, couleur de fond des questions,
-        import d'une photo à partir d'un lien.
+Lot 3 (livré) : reprise d'une partie interrompue, couleur de fond des
+        questions, import d'une photo à partir d'un lien.

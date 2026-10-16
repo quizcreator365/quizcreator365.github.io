@@ -377,3 +377,26 @@ ol.qlist .text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; t
   .pair-n { margin-bottom: 0; }
   .crop-panel { padding: 14px; }
 }
+
+/* ---------- Lot 3 : reprise, couleur de fond, import ---------- */
+.resume-box { background: var(--card); border: 2px solid var(--primary); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+body { transition: background-color 0.3s; }
+.screen.on-dark { color: #fff; }
+.screen.on-dark .muted, .screen.on-dark .counter { color: rgba(255, 255, 255, 0.82); }
+.screen.on-dark .tag { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.screen.on-dark .progress { background: rgba(255, 255, 255, 0.3); }
+.screen.on-color .pill, .screen.on-color .option, .screen.on-color .answer-box, .screen.on-color .self-eval,
+.screen.on-color details.more, .screen.on-color .match-item:not(.active), .screen.on-color .chrono-item,
+.screen.on-color .corr-list li, .screen.on-color .textarea { color: var(--ink); }
+.screen.on-color .answer-box .label { color: var(--muted); }
+.screen.on-color .answer-box.ref .label { color: var(--primary-ink); }
+.screen.on-color .option .muted, .screen.on-color .chrono-item .muted { color: var(--muted); }
+.screen.on-color .btn-secondary { background: var(--card); }
+
+.color-row { display: flex; align-items: center; gap: 8px; }
+.color-row .input { flex: 1; min-width: 0; }
+.input.invalid { border-color: var(--bad); }
+.color-picker { width: 48px; height: 48px; padding: 2px; border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; flex: none; }
+.color-preview { border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); color: var(--ink); }
+.link-import { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.link-import .input { flex: 1; min-width: 0; }

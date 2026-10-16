@@ -47,6 +47,7 @@ export interface Question {
   prompt: string
   image_path?: string | null
   more_info?: string | null
+  background_color?: string | null
   answers: Answer[]
 }
 

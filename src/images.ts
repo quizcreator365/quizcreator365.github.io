@@ -79,3 +79,36 @@ export async function removeUnusedImages(paths: (string | null | undefined)[]) {
   }
   if (unused.length) await supabase.storage.from(BUCKET).remove(unused)
 }
+
+/**
+ * Récupère une image à partir de son adresse web, via la fonction Supabase « import-image »
+ * (un navigateur ne peut pas lire directement les images des autres sites).
+ */
+export async function fetchImageFromUrl(link: string): Promise<Blob> {
+  const url = link.trim()
+  if (!/^https?:\/\//i.test(url)) throw new Error("L'adresse doit commencer par http:// ou https://.")
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) throw new Error('Ta session a expiré. Reconnecte-toi pour continuer.')
+  let res: Response
+  try {
+    res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ url }),
+    })
+  } catch {
+    throw new Error('Connexion impossible. Vérifie ta connexion internet et réessaie.')
+  }
+  if (res.status === 404) throw new Error("La fonction d'import n'est pas installée dans Supabase (voir MISE-A-JOUR-LOT3.txt).")
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.error ?? `Import impossible (erreur ${res.status}).`)
+  }
+  const type = res.headers.get('X-Image-Type') ?? 'image/jpeg'
+  return new Blob([await res.arrayBuffer()], { type })
+}
