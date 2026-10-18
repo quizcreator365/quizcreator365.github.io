@@ -26,6 +26,7 @@ export interface QuestionRow {
   type: QuestionType
   prompt: string
   position: number
+  is_hidden: boolean
 }
 
 export interface QuestionForm {
@@ -64,7 +65,7 @@ export async function listQuizzes(): Promise<QuizRow[]> {
 export async function getQuiz(id: string) {
   const [quiz, questions] = await Promise.all([
     supabase.from('quizzes').select('id, slug, name, description, is_published, players(id, name, position)').eq('id', id).single(),
-    supabase.from('questions').select('id, type, prompt, position').eq('quiz_id', id).order('position').order('created_at'),
+    supabase.from('questions').select('id, type, prompt, position, is_hidden').eq('quiz_id', id).order('position').order('created_at'),
   ])
   fail(quiz.error)
   fail(questions.error)
@@ -111,6 +112,12 @@ export async function saveQuiz(form: QuizForm): Promise<string> {
     fail(ins.error)
   }
   return id
+}
+
+/** Publie ou masque une question (une question masquée n'est pas envoyée aux joueurs). */
+export async function setQuestionHidden(id: string, hidden: boolean) {
+  const { error } = await supabase.from('questions').update({ is_hidden: hidden }).eq('id', id)
+  fail(error)
 }
 
 export async function setPublished(id: string, published: boolean) {

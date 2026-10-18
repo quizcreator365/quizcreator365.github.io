@@ -2,7 +2,7 @@ import type { PlayerAnswer, Question } from './types'
 
 /**
  * Points obtenus sur une question, entre 0 et 1.
- * - Texte libre, Qui suis-je ?, Quiz photo : auto-évaluation (1 ou 0).
+ * - Texte libre, Quiz photo : auto-évaluation (1 ou 0).
  * - QCM et vrai ou faux : 1 si les cases cochées sont exactement les bonnes, sinon 0.
  * - Association : paires justes / nombre de paires.
  * - Chronologie : éléments à la bonne position / nombre d'éléments.
@@ -12,7 +12,6 @@ export function scoreQuestion(question: Question, answer: PlayerAnswer | undefin
 
   switch (question.type) {
     case 'free_text':
-    case 'who_am_i':
     case 'photo':
       return answer.kind === 'text' && answer.selfCorrect === true ? 1 : 0
 

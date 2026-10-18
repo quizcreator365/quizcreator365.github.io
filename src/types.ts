@@ -4,20 +4,19 @@ export type QuestionType =
   | 'true_false'
   | 'matching'
   | 'chronology'
-  | 'who_am_i'
   | 'photo'
 
 /** Types disponibles (tous depuis le lot 2). */
-export const AVAILABLE_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false', 'matching', 'chronology', 'who_am_i', 'photo']
+export const AVAILABLE_TYPES: QuestionType[] = ['free_text', 'mcq', 'true_false', 'matching', 'chronology', 'photo']
 
 /** Types qui peuvent rapporter des points partiels. */
 export const PARTIAL_TYPES: QuestionType[] = ['matching', 'chronology']
 
 /** Types dont la réponse est un texte libre auto-évalué. */
-export const TEXT_TYPES: QuestionType[] = ['free_text', 'who_am_i', 'photo']
+export const TEXT_TYPES: QuestionType[] = ['free_text', 'photo']
 
 /** Types qui affichent une photo. */
-export const IMAGE_TYPES: QuestionType[] = ['who_am_i', 'photo']
+export const IMAGE_TYPES: QuestionType[] = ['photo']
 
 export const TYPE_LABELS: Record<QuestionType, string> = {
   free_text: 'Texte libre',
@@ -25,7 +24,6 @@ export const TYPE_LABELS: Record<QuestionType, string> = {
   true_false: 'Vrai ou faux',
   matching: 'Association',
   chronology: 'Chronologie',
-  who_am_i: 'Qui suis-je ?',
   photo: 'Quiz photo',
 }
 

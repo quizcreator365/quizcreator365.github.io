@@ -419,3 +419,13 @@ body { transition: background-color 0.3s; }
   border: 7px solid transparent; border-top-color: var(--ink);
 }
 .tip-wrap:hover .tooltip, .tip-wrap.show .tooltip { opacity: 1; visibility: visible; }
+
+/* Recherche et statut des questions (fiche quiz) */
+.search-field .input { width: 100%; }
+ol.qlist li.hidden { background: #f6f7fb; border-style: dashed; }
+ol.qlist li.hidden .text { color: var(--muted); }
+.status-badge { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: #ecedf3; color: #4a4f75; font-size: 13px; font-weight: 700; }
+ol.qlist .icon-btn.eye { color: var(--primary-ink); display: inline-flex; align-items: center; justify-content: center; }
+ol.qlist .icon-btn.eye.off { color: var(--muted); background: #ecedf3; }
+ol.qlist .icon-btn.eye { width: 36px; height: 36px; }
+@media (max-width: 720px) { ol.qlist .icon-btn.eye { width: 44px; height: 44px; } }

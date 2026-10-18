@@ -204,7 +204,6 @@ function setType(type: QuestionType) {
   // Entre texte libre et types photo, la réponse attendue est conservée.
   if (!(wasText && TEXT_TYPES.includes(type))) form.value.answers = defaultAnswers(type)
   resetStructured(type)
-  if (type === 'who_am_i' && !form.value.prompt.trim()) form.value.prompt = 'Qui suis-je ?'
 }
 
 function onTypeSelect(event: Event) {

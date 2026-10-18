@@ -6,7 +6,7 @@ import { plainText } from '../format'
 import Icon from '../Icon.vue'
 import { TYPE_LABELS } from '../types'
 import { copyText, quizUrl, slugError, slugify } from '../utils'
-import { deleteQuestion, duplicateQuiz, getQuiz, isSlugTaken, reorderQuestions, saveQuiz, setPublished, type QuestionRow, type QuizForm } from './api'
+import { deleteQuestion, duplicateQuiz, getQuiz, isSlugTaken, reorderQuestions, saveQuiz, setPublished, setQuestionHidden, type QuestionRow, type QuizForm } from './api'
 
 const props = defineProps<{ id?: string }>()
 const router = useRouter()
@@ -173,6 +173,36 @@ async function removeQuestion(qid: string) {
   }
 }
 
+// ---------- Recherche et statut des questions ----------
+const search = ref('')
+const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr')
+const searching = computed(() => search.value.trim().length > 0)
+const visibleQuestions = computed(() => {
+  const terms = normalize(search.value).split(/\s+/).filter(Boolean)
+  return questions.value
+    .map((q, i) => ({ q, i }))
+    .filter(({ q }) => {
+      const haystack = normalize(`${plainText(q.prompt)} ${TYPE_LABELS[q.type]} ${q.is_hidden ? 'masquée' : 'publiée'}`)
+      return terms.every((t) => haystack.includes(t))
+    })
+})
+const hiddenCount = computed(() => questions.value.filter((q) => q.is_hidden).length)
+
+const toggling = ref<string | null>(null)
+async function toggleHidden(q: QuestionRow) {
+  toggling.value = q.id
+  error.value = ''
+  try {
+    await setQuestionHidden(q.id, !q.is_hidden)
+    q.is_hidden = !q.is_hidden
+    flash(q.is_hidden ? 'Question masquée : les joueurs ne la verront pas' : 'Question publiée')
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    toggling.value = null
+  }
+}
+
 // ---------- Ordre des questions ----------
 const listEl = ref<HTMLOListElement | null>(null)
 let sortable: Sortable | null = null
@@ -185,6 +215,7 @@ watch(
       sortable = Sortable.create(listEl.value, {
         handle: '.drag',
         animation: 150,
+        disabled: searching.value,
         onEnd(evt) {
           const { oldIndex, newIndex, item, from } = evt
           if (oldIndex === undefined || newIndex === undefined || oldIndex === newIndex) return
@@ -201,6 +232,8 @@ watch(
     }
   },
 )
+// Pendant une recherche, la liste est filtrée : on ne réordonne pas.
+watch(searching, (on) => sortable?.option('disabled', on))
 onBeforeUnmount(() => sortable?.destroy())
 
 async function moveQuestion(from: number, to: number) {
@@ -330,7 +363,7 @@ function flash(message: string) {
 
       <section class="panel main">
         <div class="row" style="justify-content: space-between">
-          <h2>Questions <span class="small muted" style="font-family: var(--body); font-weight: 400">· {{ questions.length }}</span></h2>
+          <h2>Questions <span class="small muted" style="font-family: var(--body); font-weight: 400">· {{ questions.length }}<template v-if="hiddenCount"> dont {{ hiddenCount }} {{ hiddenCount > 1 ? 'masquées' : 'masquée' }}</template></span></h2>
           <div class="row">
             <a v-if="props.id && !dirty" class="btn btn-ghost btn-small" :href="previewUrl" target="_blank" rel="noopener">Prévisualiser ↗</a>
             <button type="button" class="btn btn-primary btn-small" :disabled="!canSave" @click="addQuestion">+ Ajouter une question</button>
@@ -341,17 +374,37 @@ function flash(message: string) {
         <p v-else-if="questions.length === 0" class="muted">Pas encore de question.</p>
 
         <template v-else>
+          <div class="search-field">
+            <label class="sr-only" for="question-search">Rechercher une question</label>
+            <input id="question-search" v-model="search" class="input" type="search" placeholder="Rechercher une question (texte, type, masquée…)" autocomplete="off" />
+          </div>
+          <p v-if="searching" class="small muted" aria-live="polite">
+            {{ visibleQuestions.length === 0 ? 'Aucune question ne correspond.' : `${visibleQuestions.length} ${visibleQuestions.length > 1 ? 'questions trouvées' : 'question trouvée'} sur ${questions.length}.` }}
+          </p>
           <ol ref="listEl" class="qlist">
-            <li v-for="(q, i) in questions" :key="q.id">
-              <span class="drag" title="Glisser pour déplacer" aria-hidden="true">
+            <li v-for="{ q, i } in visibleQuestions" :key="q.id" :class="{ hidden: q.is_hidden }">
+              <span v-if="!searching" class="drag" title="Glisser pour déplacer" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" /></svg>
               </span>
               <span class="n">{{ i + 1 }}</span>
               <span class="type">{{ TYPE_LABELS[q.type] }}</span>
-              <span class="text">{{ plainText(q.prompt) }}</span>
+              <span class="text" :title="plainText(q.prompt)"><span v-if="q.is_hidden" class="status-badge">Masquée</span>{{ plainText(q.prompt) }}</span>
               <span class="q-actions">
-                <button type="button" class="icon-btn move" :disabled="i === 0" :aria-label="`Monter la question ${i + 1}`" @click="moveQuestion(i, i - 1)">↑</button>
-                <button type="button" class="icon-btn move" :disabled="i === questions.length - 1" :aria-label="`Descendre la question ${i + 1}`" @click="moveQuestion(i, i + 1)">↓</button>
+                <template v-if="!searching">
+                  <button type="button" class="icon-btn move" :disabled="i === 0" :aria-label="`Monter la question ${i + 1}`" @click="moveQuestion(i, i - 1)">↑</button>
+                  <button type="button" class="icon-btn move" :disabled="i === questions.length - 1" :aria-label="`Descendre la question ${i + 1}`" @click="moveQuestion(i, i + 1)">↓</button>
+                </template>
+                <button
+                  type="button"
+                  class="icon-btn eye"
+                  :class="{ off: q.is_hidden }"
+                  :disabled="toggling === q.id"
+                  :title="q.is_hidden ? 'Masquée : cliquer pour publier' : 'Publiée : cliquer pour masquer'"
+                  :aria-label="`${q.is_hidden ? 'Publier' : 'Masquer'} la question ${i + 1}`"
+                  @click="toggleHidden(q)"
+                >
+                  <Icon :name="q.is_hidden ? 'eye-off' : 'eye'" :size="20" />
+                </button>
                 <RouterLink class="btn btn-ghost btn-small" :to="{ name: 'question', params: { id: props.id, qid: q.id } }">Modifier</RouterLink>
                 <button type="button" class="btn btn-danger btn-small" :aria-label="`Supprimer la question ${i + 1}`" @click="confirmQid = q.id">Supprimer</button>
               </span>
@@ -362,7 +415,10 @@ function flash(message: string) {
             <button type="button" class="btn btn-secondary btn-small" @click="confirmQid = null">Annuler</button>
             <button type="button" class="btn btn-danger solid btn-small" @click="confirmQid && removeQuestion(confirmQid)">Supprimer</button>
           </div>
-          <p class="small muted">Glisse les questions par la poignée ⋮⋮ ou utilise les flèches pour changer l'ordre.</p>
+          <p class="small muted">
+            {{ searching ? 'Efface la recherche pour changer l’ordre des questions.' : 'Glisse les questions par la poignée ⋮⋮ ou utilise les flèches pour changer l’ordre.' }}
+            L’œil masque ou publie une question : une question masquée reste dans le quiz mais n’est pas proposée aux joueurs.
+          </p>
         </template>
       </section>
     </div>

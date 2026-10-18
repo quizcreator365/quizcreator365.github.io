@@ -437,7 +437,7 @@ onMounted(load)
       <template v-else>
         <span class="tag">{{ TYPE_LABELS[current.type] }}</span>
         <figure v-if="currentImage" class="question-photo">
-          <img :src="currentImage" :alt="current.type === 'who_am_i' ? 'Photo de la personne à trouver' : 'Photo de la question'" />
+          <img :src="currentImage" alt="Photo de la question" />
         </figure>
         <h1 class="prompt" v-html="renderInline(current.prompt)"></h1>
         <QuestionAnswer
