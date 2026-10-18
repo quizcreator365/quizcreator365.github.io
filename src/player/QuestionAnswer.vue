@@ -84,7 +84,7 @@ function onText(event: Event) {
             :name="`q-${question.id}`"
             :checked="chosen.includes(option.id)"
             :disabled="readonly"
-            @click.prevent="toggle(option.id)"
+            @change="toggle(option.id)"
           />
           <span v-html="renderInline(option.text)"></span>
         </label>

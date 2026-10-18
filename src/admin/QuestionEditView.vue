@@ -325,7 +325,11 @@ async function goNext() {
   const i = fresh.findIndex((q) => q.id === (id ?? props.qid))
   const next = i === -1 ? undefined : fresh[i + 1]
   if (next) navigate({ name: 'question', params: { id: props.id, qid: next.id } })
-  else navigate({ name: 'question-new', params: { id: props.id } })
+  else if (!props.qid) {
+    // Déjà sur « nouvelle question » : l'adresse ne change pas, on vide le formulaire nous-mêmes.
+    await load()
+    window.scrollTo(0, 0)
+  } else navigate({ name: 'question-new', params: { id: props.id } })
 }
 
 async function finish() {

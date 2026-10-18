@@ -67,6 +67,16 @@ const canValidate = computed(() => {
   return true
 })
 
+/** Infobulle du bouton grisé : au survol sur ordinateur, au toucher sur téléphone. */
+const tipShown = ref(false)
+let tipTimer: ReturnType<typeof setTimeout> | undefined
+function flashTip() {
+  if (canContinue.value) return
+  tipShown.value = true
+  clearTimeout(tipTimer)
+  tipTimer = setTimeout(() => (tipShown.value = false), 3000)
+}
+
 const canContinue = computed(() => {
   const a = current.value && answers.value[current.value.id]
   return !(a && a.kind === 'text' && a.selfCorrect === null)
@@ -409,11 +419,19 @@ onMounted(load)
           <button type="button" class="btn btn-secondary btn-big" style="font-family: var(--body); font-size: 16px" @click="stage = 'review'">
             Revenir
           </button>
-          <button type="button" class="btn btn-primary btn-big wide" :disabled="!canContinue" @click="next">
-            {{ isLast ? 'Voir mon résultat' : 'Question suivante' }}
-          </button>
+          <span class="tip-wrap wide" :class="{ show: tipShown && !canContinue }" @pointerdown="flashTip">
+            <button
+              type="button"
+              class="btn btn-primary btn-big btn-block"
+              :disabled="!canContinue"
+              :aria-describedby="canContinue ? undefined : 'next-tip'"
+              @click="next"
+            >
+              {{ isLast ? 'Voir mon résultat' : 'Question suivante' }}
+            </button>
+            <span v-if="!canContinue" id="next-tip" role="tooltip" class="tooltip">Indique si ta réponse était juste pour continuer.</span>
+          </span>
         </div>
-        <p v-if="!canContinue" class="small muted" style="text-align: center">Indique si ta réponse était juste pour continuer.</p>
       </template>
 
       <template v-else>

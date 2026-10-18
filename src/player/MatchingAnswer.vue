@@ -10,7 +10,6 @@ const emit = defineEmits<{ 'update:modelValue': [value: PlayerAnswer] }>()
 const lefts = computed(() => props.options.filter((a) => a.side === 'left'))
 const rights = computed(() => props.options.filter((a) => a.side === 'right'))
 const pairs = computed(() => (props.modelValue.kind === 'pairs' ? props.modelValue.pairs : {}))
-const selected = ref<string | null>(null)
 
 /** Numéro de paire d'un élément de gauche (ordre d'association), ou null. */
 const order = computed(() => {
@@ -29,26 +28,42 @@ function update(next: Record<string, string>) {
   emit('update:modelValue', { kind: 'pairs', pairs: next })
 }
 
-function tapLeft(id: string) {
-  if (props.readonly) return
-  selected.value = selected.value === id ? null : id
+type Side = 'left' | 'right'
+const selected = ref<{ side: Side; id: string } | null>(null)
+const isSelected = (side: Side, id: string) => selected.value?.side === side && selected.value.id === id
+
+/** Élément de gauche associé à un élément (lui-même s'il est à gauche). */
+function ownerOf(side: Side, id: string) {
+  return side === 'left' ? (id in pairs.value ? id : null) : leftOfRight(id)
 }
 
-function tapRight(id: string) {
+/**
+ * On peut commencer par l'une ou l'autre colonne : on touche un élément, puis celui qui lui
+ * correspond dans l'autre colonne. Toucher une paire formée (sans sélection) la défait.
+ */
+function tap(side: Side, id: string) {
   if (props.readonly) return
-  const owner = leftOfRight(id)
-  if (!selected.value) {
-    // Toucher une paire formée la défait.
-    if (owner) {
+  const current = selected.value
+  if (current && current.side === side && current.id === id) {
+    selected.value = null
+    return
+  }
+  if (!current || current.side === side) {
+    const owner = ownerOf(side, id)
+    if (!current && owner) {
       const next = { ...pairs.value }
       delete next[owner]
       update(next)
     }
+    selected.value = { side, id }
     return
   }
+  const leftId = side === 'left' ? id : current.id
+  const rightId = side === 'right' ? id : current.id
   const next = { ...pairs.value }
-  if (owner) delete next[owner]
-  next[selected.value] = id
+  const previousOwner = leftOfRight(rightId)
+  if (previousOwner) delete next[previousOwner]
+  next[leftId] = rightId
   update(next)
   selected.value = null
 }
@@ -65,7 +80,7 @@ function cardStyle(i: number | null) {
 
 <template>
   <div class="stack">
-    <p class="small muted">Touche un élément à gauche, puis celui qui lui correspond à droite. Touche une paire à droite pour la défaire.</p>
+    <p class="small muted">Touche un élément d'une colonne, puis celui qui lui correspond dans l'autre. Touche une paire formée pour la défaire.</p>
     <div class="match-grid">
       <div class="stack" style="gap: 10px" role="group" aria-label="Éléments à associer">
         <button
@@ -73,11 +88,11 @@ function cardStyle(i: number | null) {
           :key="l.id"
           type="button"
           class="match-item"
-          :class="{ active: selected === l.id }"
+          :class="{ active: isSelected('left', l.id) }"
           :style="cardStyle(order(l.id))"
-          :aria-pressed="selected === l.id"
+          :aria-pressed="isSelected('left', l.id)"
           :disabled="readonly"
-          @click="tapLeft(l.id)"
+          @click="tap('left', l.id)"
         >
           <span class="match-badge" :style="badgeStyle(order(l.id))">{{ order(l.id) !== null ? order(l.id)! + 1 : '' }}</span>
           <span v-html="renderInline(l.text)"></span>
@@ -89,9 +104,11 @@ function cardStyle(i: number | null) {
           :key="r.id"
           type="button"
           class="match-item"
+          :class="{ active: isSelected('right', r.id) }"
           :style="cardStyle(leftOfRight(r.id) ? order(leftOfRight(r.id)!) : null)"
+          :aria-pressed="isSelected('right', r.id)"
           :disabled="readonly"
-          @click="tapRight(r.id)"
+          @click="tap('right', r.id)"
         >
           <span class="match-badge" :style="badgeStyle(leftOfRight(r.id) ? order(leftOfRight(r.id)!) : null)">{{ leftOfRight(r.id) ? order(leftOfRight(r.id)!)! + 1 : '' }}</span>
           <span v-html="renderInline(r.text)"></span>

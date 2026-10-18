@@ -261,7 +261,7 @@ function flash(message: string) {
         <h2>Informations</h2>
         <div class="field">
           <label for="quiz-name">Nom</label>
-          <input id="quiz-name" v-model="form.name" class="input" maxlength="200" required placeholder="Le quiz des voisines" />
+          <input id="quiz-name" v-model="form.name" class="input" maxlength="200" required placeholder="Nom du nouveau quiz" />
         </div>
         <div class="field">
           <label for="quiz-desc">Description</label>

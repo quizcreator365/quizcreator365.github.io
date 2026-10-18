@@ -89,7 +89,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: var(--primary-soft); color: var(--primary-ink);
   font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
 }
-.prompt { font-family: var(--display); font-weight: 500; font-size: 23px; line-height: 1.3; white-space: pre-line; }
+.prompt { font-family: var(--display); font-weight: 500; font-size: 23px; line-height: 1.3; white-space: pre-line; overflow-wrap: anywhere; }
+.option > span { overflow-wrap: anywhere; min-width: 0; }
 
 .option {
   display: flex; align-items: center; gap: 14px; width: 100%;
@@ -397,6 +398,22 @@ body { transition: background-color 0.3s; }
 .color-row .input { flex: 1; min-width: 0; }
 .input.invalid { border-color: var(--bad); }
 .color-picker { width: 48px; height: 48px; padding: 2px; border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; flex: none; }
-.color-preview { border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); color: var(--ink); }
+.color-preview { overflow-wrap: anywhere; min-width: 0; border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); color: var(--ink); }
 .link-import { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .link-import .input { flex: 1; min-width: 0; }
+
+/* Infobulle d'un bouton grisé (survol sur ordinateur, toucher sur téléphone) */
+.tip-wrap { position: relative; display: flex; }
+.actions > .tip-wrap { flex: 1; }
+.actions > .tip-wrap.wide { flex: 2; }
+.tip-wrap .btn:disabled { pointer-events: none; }
+.tooltip {
+  position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--ink); color: #fff; font-size: 14px; line-height: 1.35; text-align: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; visibility: hidden; transition: opacity 0.15s; z-index: 5;
+}
+.tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 7px solid transparent; border-top-color: var(--ink);
+}
+.tip-wrap:hover .tooltip, .tip-wrap.show .tooltip { opacity: 1; visibility: visible; }
