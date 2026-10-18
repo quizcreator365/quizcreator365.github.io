@@ -152,8 +152,10 @@ details.more p { margin-top: 10px; font-size: 16px; white-space: pre-line; }
 .btn-danger { background: transparent; color: var(--bad-ink); }
 .btn-danger.solid { background: var(--bad); color: #fff; }
 .btn-good { background: var(--good); color: #fff; }
+/* Auto-évaluation : vert discret tant que le joueur n'a pas choisi, plein une fois choisi. */
+.self-eval .btn-good { background: var(--card); color: var(--good-ink); border-color: #a9dcc4; }
 .btn-bad { background: var(--card); color: var(--bad-ink); border-color: #e8b4b0; }
-.btn-good.picked { box-shadow: 0 0 0 3px #a9dcc4; }
+.self-eval .btn-good.picked { background: var(--good); color: #fff; border-color: var(--good); }
 .btn-bad.picked { background: var(--bad); color: #fff; border-color: var(--bad); }
 .btn-big { min-height: 58px; border-radius: 16px; font-family: var(--display); font-weight: 600; font-size: 20px; }
 .btn-block { width: 100%; }
