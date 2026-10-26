@@ -46,6 +46,8 @@ export interface Question {
   image_path?: string | null
   more_info?: string | null
   background_color?: string | null
+  /** Jour de série (date d'ouverture, AAAA-MM-JJ). */
+  day?: string | null
   answers: Answer[]
 }
 
@@ -59,6 +61,8 @@ export interface Quiz {
   slug: string
   name: string
   description: string | null
+  /** Date du jour à Paris, donnée par la base (AAAA-MM-JJ). */
+  today?: string
   players: Player[]
   questions: Question[]
 }

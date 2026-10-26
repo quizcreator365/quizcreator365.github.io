@@ -4,14 +4,14 @@ Application web de quiz : l'admin crée des quiz dans un back office, les joueur
 
 - **Site** : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - **Données, connexion admin, photos** : Supabase (offre gratuite).
-- **Version** : lot 3. Tous les types de questions, reprise d'une partie interrompue, couleur de fond des questions, import de photo par lien.
+- **Version** : lot 4. Réponses et scores enregistrés, code personnel par joueur, questions programmées jour par jour, évolution, cumul et classement.
 
 ## Mise en route (une seule fois, environ 20 minutes)
 
 ### 1. Créer le projet Supabase
 
 1. Sur [supabase.com](https://supabase.com), crée un compte puis un projet (région conseillée : Paris ou Francfort). Note le mot de passe de la base.
-2. Ouvre **SQL Editor** et exécute, dans l'ordre, `supabase/migrations/20261014000000_init.sql`, `20261016000000_lot1.sql`, `20261017000000_lot2.sql` puis `20261018000000_lot3.sql`, puis installe la fonction `supabase/functions/import-image` (voir MISE-A-JOUR-LOT3.txt).
+2. Ouvre **SQL Editor** et exécute, dans l'ordre, `supabase/migrations/20261014000000_init.sql`, `20261016000000_lot1.sql`, `20261017000000_lot2.sql`, `20261018000000_lot3.sql`, `20261019000000_evolutions.sql` puis `20261027000000_lot4.sql`, puis installe la fonction `supabase/functions/import-image` (voir MISE-A-JOUR-LOT3.txt).
 3. Ouvre **Authentication › Sign In / Providers** et désactive **Allow new users to sign up**. Ton compte sera ainsi le seul possible.
 4. Ouvre **Authentication › Users › Add user › Create new user**. Saisis ton email et un mot de passe, et coche **Auto Confirm User**.
 5. Dans **SQL Editor**, donne-toi les droits d'admin (remplace l'email) :
@@ -81,9 +81,11 @@ scripts/spa-fallback.mjs   copie index.html en 404.html pour les adresses /voisi
 | Association (lot 1) | paires justes ÷ nombre de paires |
 | Chronologie (lot 1) | éléments bien placés ÷ nombre d'éléments |
 
+Les points sont rattachés au jour d'ouverture de la question (lot 4). Score du jour = points ÷ questions ouvertes ce jour-là ; cumul = total depuis le début.
+
 ## Limites connues
 
-- Les bonnes réponses sont envoyées au navigateur pour la correction : un joueur averti peut les lire avec les outils de développement.
+- Les bonnes réponses sont envoyées au navigateur pour la correction : un joueur averti peut les lire avec les outils de développement. Le code à 4 chiffres protège des erreurs et des blagues, pas d'un tricheur déterminé.
 - Un projet Supabase gratuit se met en pause après 7 jours sans activité. Le workflow « Garder Supabase actif » l'appelle deux fois par semaine.
 - Les adresses de quiz sont servies par `404.html` : le jeu fonctionne normalement, mais l'aperçu du lien dans WhatsApp peut être sommaire.
 
@@ -92,5 +94,7 @@ scripts/spa-fallback.mjs   copie index.html en 404.html pour les adresses /voisi
 - **Lot 1 (livré)** : Qui suis-je ?, Quiz photo, partage du résultat sur WhatsApp, back office sur téléphone, réorganisation des questions, aperçu et duplication d'un quiz.
 - **Lot 2 (livré)** : association, chronologie, gras et italique, recadrage des photos, publier ou fermer un quiz, petites corrections.
 - **Lot 3 (livré)** : reprise d'une partie interrompue, couleur de fond des questions, import d'une photo à partir d'un lien.
+- **Évolutions (livré)** : recherche de questions dans un quiz, questions publiées ou masquées, « Qui suis-je ? » fusionné dans « Quiz photo ».
+- **Lot 4 (livré)** : réponses enregistrées (une par question), codes des joueurs, programmation des questions, rattrapage, « Mes scores » avec évolution, cumul et classement, page admin « Scores et réponses ». Voir MISE-A-JOUR-LOT4.txt.
 
 Voir aussi LISEZMOI.txt, section « Pièges à éviter ».

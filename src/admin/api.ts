@@ -18,7 +18,20 @@ export interface QuizForm {
   slug: string
   name: string
   description: string
-  players: string[]
+  players: PlayerForm[]
+}
+
+export interface PlayerForm {
+  id?: string
+  name: string
+  /** Code personnel à 4 chiffres (vide : tiré au hasard à l'enregistrement). */
+  code: string
+}
+
+/** Code à 4 chiffres tiré au hasard. */
+export function randomCode(): string {
+  const n = crypto.getRandomValues(new Uint32Array(1))[0] % 10000
+  return String(n).padStart(4, '0')
 }
 
 export interface QuestionRow {
@@ -27,6 +40,8 @@ export interface QuestionRow {
   prompt: string
   position: number
   is_hidden: boolean
+  scheduled_on: string | null
+  hidden_on: string | null
 }
 
 export interface QuestionForm {
@@ -37,6 +52,8 @@ export interface QuestionForm {
   more_info: string
   image_path?: string | null
   background_color?: string | null
+  /** Jour d'ouverture (AAAA-MM-JJ), vide si non programmée. */
+  scheduled_on?: string | null
   answers: AnswerForm[]
 }
 
@@ -64,19 +81,22 @@ export async function listQuizzes(): Promise<QuizRow[]> {
 
 export async function getQuiz(id: string) {
   const [quiz, questions] = await Promise.all([
-    supabase.from('quizzes').select('id, slug, name, description, is_published, players(id, name, position)').eq('id', id).single(),
-    supabase.from('questions').select('id, type, prompt, position, is_hidden').eq('quiz_id', id).order('position').order('created_at'),
+    supabase.from('quizzes').select('id, slug, name, description, is_published, players(id, name, position, code)').eq('id', id).single(),
+    supabase.from('questions').select('id, type, prompt, position, is_hidden, scheduled_on, hidden_on').eq('quiz_id', id).order('position').order('created_at'),
   ])
   fail(quiz.error)
   fail(questions.error)
-  const q = quiz.data as { id: string; slug: string; name: string; description: string | null; is_published: boolean; players: { name: string; position: number }[] }
+  const q = quiz.data as {
+    id: string; slug: string; name: string; description: string | null; is_published: boolean
+    players: { id: string; name: string; position: number; code: string }[]
+  }
   return {
     form: {
       id: q.id,
       slug: q.slug,
       name: q.name,
       description: q.description ?? '',
-      players: [...q.players].sort((a, b) => a.position - b.position).map((p) => p.name),
+      players: [...q.players].sort((a, b) => a.position - b.position).map((p) => ({ id: p.id, name: p.name, code: p.code })),
     } as QuizForm,
     isPublished: q.is_published,
     questions: (questions.data ?? []) as QuestionRow[],
@@ -102,21 +122,57 @@ export async function saveQuiz(form: QuizForm): Promise<string> {
     fail(error)
     id = (data as { id: string }).id
   }
-  // Les joueurs ne sont référencés nulle part ailleurs : on remplace la liste.
-  const del = await supabase.from('players').delete().eq('quiz_id', id)
-  fail(del.error)
-  if (form.players.length) {
-    const ins = await supabase
-      .from('players')
-      .insert(form.players.map((name, position) => ({ quiz_id: id, name, position })))
-    fail(ins.error)
-  }
+  // Les joueurs gardent leur identifiant : leurs réponses et scores sont conservés.
+  const res = await supabase.rpc('save_players', {
+    p_quiz_id: id,
+    p: form.players.map((p) => ({ id: p.id ?? '', name: p.name, code: p.code })),
+  })
+  fail(res.error)
   return id
 }
 
-/** Publie ou masque une question (une question masquée n'est pas envoyée aux joueurs). */
-export async function setQuestionHidden(id: string, hidden: boolean) {
-  const { error } = await supabase.from('questions').update({ is_hidden: hidden }).eq('id', id)
+/** Ouvre (date du jour si elle n'en a pas) ou masque une question. */
+export async function setQuestionOpen(id: string, open: boolean) {
+  const { error } = await supabase.rpc('set_question_open', { p_question: id, p_open: open })
+  fail(error)
+}
+
+/** Programme (ou déprogramme) une question. */
+export async function setQuestionDate(id: string, day: string | null) {
+  const { error } = await supabase.rpc('set_question_date', { p_question: id, p_day: day })
+  fail(error)
+}
+
+/** Programme les questions sans date, N par jour à partir d'une date. */
+export async function scheduleQuestions(quizId: string, start: string, perDay: number): Promise<number> {
+  const { data, error } = await supabase.rpc('schedule_questions', { p_quiz_id: quizId, p_start: start, p_per_day: perDay })
+  fail(error)
+  return data as number
+}
+
+// ---------- Scores et réponses ----------
+export interface ResponseRow {
+  id: string
+  question_id: string
+  player_id: string
+  answer: unknown
+  points: number | null
+  answered_at: string
+}
+
+export async function listResponses(questionIds: string[]): Promise<ResponseRow[]> {
+  if (!questionIds.length) return []
+  const { data, error } = await supabase
+    .from('responses')
+    .select('id, question_id, player_id, answer, points, answered_at')
+    .in('question_id', questionIds)
+    .order('answered_at')
+  fail(error)
+  return ((data ?? []) as ResponseRow[]).map((r) => ({ ...r, points: r.points === null ? null : Number(r.points) }))
+}
+
+export async function deleteResponse(id: string) {
+  const { error } = await supabase.from('responses').delete().eq('id', id)
   fail(error)
 }
 
@@ -146,13 +202,13 @@ export async function reorderQuestions(quizId: string, ids: string[]) {
 export async function getQuestion(qid: string): Promise<QuestionForm> {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, quiz_id, type, prompt, more_info, image_path, background_color, answers(text, is_correct, position, side, pair_key, date_label)')
+    .select('id, quiz_id, type, prompt, more_info, image_path, background_color, scheduled_on, answers(text, is_correct, position, side, pair_key, date_label)')
     .eq('id', qid)
     .single()
   fail(error)
   const q = data as {
     id: string; quiz_id: string; type: QuestionType; prompt: string; more_info: string | null
-    image_path: string | null; background_color: string | null; answers: (AnswerForm & { position: number })[]
+    image_path: string | null; background_color: string | null; scheduled_on: string | null; answers: (AnswerForm & { position: number })[]
   }
   return {
     id: q.id,
@@ -162,6 +218,7 @@ export async function getQuestion(qid: string): Promise<QuestionForm> {
     more_info: q.more_info ?? '',
     image_path: q.image_path,
     background_color: q.background_color ?? '',
+    scheduled_on: q.scheduled_on,
     answers: [...q.answers]
       .sort((a, b) => a.position - b.position)
       .map(({ text, is_correct, side, pair_key, date_label }) => ({ text, is_correct, side, pair_key, date_label })),

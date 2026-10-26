@@ -44,8 +44,14 @@ function defaultAnswers(type: QuestionType): AnswerForm[] {
   return [{ text: '', is_correct: true }]
 }
 
+/** Le champ date renvoie '' quand il est vidé : on enregistre alors « sans date ». */
+const scheduledModel = computed({
+  get: () => form.value.scheduled_on ?? '',
+  set: (v: string) => (form.value.scheduled_on = v || null),
+})
+
 function blank(type: QuestionType): QuestionForm {
-  return { quiz_id: props.id, type, prompt: '', more_info: '', image_path: null, background_color: '', answers: defaultAnswers(type) }
+  return { quiz_id: props.id, type, prompt: '', more_info: '', image_path: null, background_color: '', scheduled_on: null, answers: defaultAnswers(type) }
 }
 
 function resetStructured(type: QuestionType) {
@@ -470,6 +476,17 @@ async function remove() {
         <div class="field">
           <label for="more">En savoir plus <span class="muted" style="font-weight: 400">(facultatif)</span></label>
           <RichField id="more" v-model="form.more_info" multiline :rows="3" counter aria-label="En savoir plus" />
+        </div>
+
+        <div class="field">
+          <label for="scheduled">Date d'ouverture <span class="muted" style="font-weight: 400">(facultatif)</span></label>
+          <div class="row" style="flex-wrap: nowrap">
+            <input id="scheduled" v-model="scheduledModel" class="input" type="date" style="width: auto" aria-describedby="scheduled-help" />
+            <button v-if="form.scheduled_on" type="button" class="btn btn-ghost btn-small" @click="form.scheduled_on = null">Retirer</button>
+          </div>
+          <span id="scheduled-help" class="small muted">
+            {{ form.scheduled_on ? 'La question s’ouvre ce jour-là ; ses points comptent pour ce jour.' : 'Sans date, la question n’est pas proposée aux joueurs.' }}
+          </span>
         </div>
 
         <div class="field">

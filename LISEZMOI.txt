@@ -7,8 +7,9 @@ ton-compte.github.io/voisines.
 
 - Site : Vue 3 + TypeScript + Vite, publié gratuitement sur GitHub Pages.
 - Données, connexion admin, photos : Supabase (offre gratuite).
-- Version : lot 3. Tous les types de questions, reprise d'une partie
-  interrompue, couleur de fond des questions, import de photo par lien.
+- Version : lot 4. Réponses et scores enregistrés, code personnel par
+  joueur, questions programmées jour par jour, évolution, cumul et
+  classement. Utilisation au quotidien : voir MISE-A-JOUR-LOT4.txt.
 
 
 MISE EN ROUTE (une seule fois, environ 20 minutes)
@@ -26,6 +27,8 @@ MISE EN ROUTE (une seule fois, environ 20 minutes)
      supabase/migrations/20261016000000_lot1.sql
      supabase/migrations/20261017000000_lot2.sql
      supabase/migrations/20261018000000_lot3.sql
+     supabase/migrations/20261019000000_evolutions.sql
+     supabase/migrations/20261027000000_lot4.sql
    Puis installe la fonction d'import de photos par lien : voir
    MISE-A-JOUR-LOT3.txt, étape 2.
 
@@ -194,3 +197,9 @@ Lot 2 (livré) : association, chronologie, gras et italique, recadrage
         des photos, publier ou fermer un quiz, petites corrections.
 Lot 3 (livré) : reprise d'une partie interrompue, couleur de fond des
         questions, import d'une photo à partir d'un lien.
+Évolutions (livré) : recherche de questions dans un quiz, questions
+        publiées ou masquées, « Qui suis-je ? » fusionné dans
+        « Quiz photo ».
+Lot 4 (livré) : réponses enregistrées, codes des joueurs, programmation
+        des questions, rattrapage, « Mes scores » (évolution, cumul,
+        classement), page admin « Scores et réponses ».

@@ -429,3 +429,70 @@ ol.qlist .icon-btn.eye { color: var(--primary-ink); display: inline-flex; align-
 ol.qlist .icon-btn.eye.off { color: var(--muted); background: #ecedf3; }
 ol.qlist .icon-btn.eye { width: 36px; height: 36px; }
 @media (max-width: 720px) { ol.qlist .icon-btn.eye { width: 44px; height: 44px; } }
+
+/* Lot 4 : code personnel, jour de série, scores */
+.code-input { font-size: 32px; letter-spacing: 0.5em; text-align: center; font-variant-numeric: tabular-nums; max-width: 240px; align-self: center; }
+.day-chip { align-self: flex-start; padding: 4px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-ink); font-size: 14px; font-weight: 700; }
+.day-chip.late { background: var(--mid-bg); color: var(--mid-ink); }
+.screen.on-color .day-chip { background: rgba(255, 255, 255, 0.85); color: var(--ink); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+.stat { background: var(--card); border: 1px solid var(--line-soft); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat .label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.stat b { font-family: var(--display); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.stat b small { font-size: 16px; color: var(--muted); font-weight: 500; }
+.day-chart { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x proximity; }
+.day-bar { flex: none; width: 44px; display: flex; flex-direction: column; align-items: center; gap: 6px; scroll-snap-align: end; }
+.day-bar .value { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day-bar .value small { color: var(--muted); font-weight: 400; }
+.day-bar .track { width: 28px; height: 120px; background: var(--line-soft); border-radius: 8px; display: flex; align-items: flex-end; overflow: hidden; }
+.day-bar .fill { width: 100%; background: var(--primary); border-radius: 8px 8px 0 0; min-height: 2px; }
+.day-bar.today .fill { background: var(--sun); }
+.day-bar .date { font-size: 12px; color: var(--muted); }
+.day-bar.today .date { color: var(--ink); font-weight: 700; }
+ol.ranking { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+ol.ranking li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--card); border: 1px solid var(--line-soft); border-radius: 12px; }
+ol.ranking li.me { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-ring); font-weight: 700; }
+ol.ranking .rank { width: 36px; font-weight: 700; color: var(--muted); }
+.result-card .card-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.15); }
+.result-card .card-stats div { display: flex; flex-direction: column; }
+.result-card .card-stats span { font-size: 12px; color: #9ca1c8; text-transform: uppercase; letter-spacing: 0.04em; }
+.result-card .card-stats b { color: #fff; font-size: 17px; }
+
+/* Lot 4 : back office (codes, programmation, scores) */
+ul.player-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+ul.player-list li { display: flex; align-items: center; gap: 8px; }
+ul.player-list .input.code { width: 76px; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: 0.15em; min-height: 40px; }
+ul.player-list .input.code.invalid { border-color: var(--bad); }
+ul.player-list .icon-btn { width: 40px; height: 40px; }
+ul.player-list .icon-btn.regen { color: var(--primary-ink); }
+.plan-box { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--primary-soft); border-radius: 12px; }
+.plan-box .row { flex-wrap: wrap; }
+ol.qlist .q-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+ol.qlist .q-top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+ol.qlist .q-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+ol.qlist .input.date { width: auto; min-height: 34px; padding: 2px 8px; font-size: 14px; }
+ol.qlist li.unscheduled, ol.qlist li.hidden { background: #f6f7fb; border-style: dashed; }
+ol.qlist li.unscheduled .text, ol.qlist li.hidden .text { color: var(--muted); }
+.status-badge.open { background: var(--good-bg); color: var(--good-ink); }
+.status-badge.scheduled { background: var(--primary-soft); color: var(--primary-ink); }
+.status-badge.hidden { background: var(--mid-bg); color: var(--mid-ink); }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 12px; }
+table.score-table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+table.score-table th, table.score-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: center; white-space: nowrap; }
+table.score-table th[scope="row"], table.score-table thead th:first-child { text-align: left; position: sticky; left: 0; background: var(--card); }
+table.score-table thead th small { color: var(--muted); font-weight: 400; }
+.response-block { border-top: 1px solid var(--line-soft); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.response-block p { margin: 0; }
+.response-block ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.response-block li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.response-block .who { font-weight: 700; width: 100px; }
+.response-block .what { min-width: 0; overflow-wrap: anywhere; }
+.response-block .pts { width: 72px; text-align: right; }
+.type-tag { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--primary-soft); color: var(--primary-ink); font-size: 12px; font-weight: 700; margin-right: 6px; }
+.late-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--mid-bg); color: var(--mid-ink); font-size: 12px; font-weight: 700; }
+.response-block .what { flex: 1 1 200px; }
+@media (max-width: 720px) {
+  .response-block .who { width: auto; flex: 1; }
+  .response-block .what { order: 5; flex: 1 1 100%; color: var(--muted); }
+  .response-block .pts { width: auto; }
+}

@@ -1,0 +1,110 @@
+MISE À JOUR : LOT 4 (SCORES ENREGISTRÉS, CODES, PROGRAMMATION)
+==============================================================
+
+Ce que change le lot 4
+----------------------
+- Chaque joueur a un code personnel à 4 chiffres. Il le saisit une fois
+  sur son téléphone, qui s'en souvient.
+- Chaque réponse est enregistrée dès que le joueur valide. Une seule
+  réponse par question : « Rejouer » disparaît.
+- Les questions s'ouvrent à leur date programmée. La date est aussi le
+  jour auquel les points sont rattachés.
+- Rattrapage sans limite : les questions des jours précédents restent
+  proposées tant qu'elles ne sont pas masquées.
+- Écran « Mes scores » : score du jour, cumul, évolution jour après jour
+  et classement des joueurs.
+- Back office : codes des joueurs, date de chaque question, programmation
+  en série, page « Scores et réponses ».
+
+AVANT DE COMMENCER : prévois 10 minutes, idéalement à un moment où
+personne ne joue. Ordre à respecter : la base d'abord, le site ensuite.
+
+
+ÉTAPE 1 : BASE DE DONNÉES (Supabase)
+------------------------------------
+1) Si ce n'est pas déjà fait, exécute d'abord
+   supabase/migrations/20261019000000_evolutions.sql (voir
+   MISE-A-JOUR-EVOLUTIONS.txt).
+2) Ouvre "SQL Editor", vide l'éditeur, colle TOUT le contenu de
+   supabase/migrations/20261027000000_lot4.sql, clique "Run".
+3) Supabase affiche l'alerte "destructive operations" : confirme. Le
+   script ajoute des colonnes et une table, remplace des fonctions, et
+   donne la date du jour aux questions visibles. Rien n'est supprimé.
+4) Le message attendu est "Success. No rows returned". Le script peut être
+   relancé sans risque.
+
+Effet sur tes questions existantes :
+- les questions visibles reçoivent la date du jour (elles restent
+  ouvertes et comptent pour aujourd'hui) ;
+- les questions masquées restent sans date : elles ne sont pas
+  proposées tant que tu ne les programmes pas.
+
+Effet sur les joueurs existants : chacun reçoit un code tiré au hasard,
+visible dans la fiche du quiz.
+
+
+ÉTAPE 2 : SITE (GitHub)
+-----------------------
+1) Décompresse quiz-des-voisines.zip.
+2) Dans ton dépôt (GitHub Desktop ou glisser-déposer), remplace :
+   - le dossier src en entier ;
+   - le dossier supabase en entier ;
+   - les fichiers README.md, LISEZMOI.txt et ce fichier.
+3) Commit et Push. La publication prend environ 3 minutes (onglet
+   Actions, « Publier sur GitHub Pages », coche verte).
+4) Le workflow « Garder Supabase actif » n'a pas besoin d'être modifié.
+
+
+ÉTAPE 3 : PRÉPARER LE QUIZ (back office)
+----------------------------------------
+1) Ouvre la fiche du quiz. Dans « Joueurs », chaque prénom a son code.
+   Tu peux le modifier (4 chiffres) ou en tirer un nouveau avec ↻.
+   Clique « Enregistrer » après une modification.
+2) Envoie à chaque voisine son code, par un message individuel.
+3) Programme les questions :
+   - une à une : champ date sous chaque question (ou dans l'éditeur,
+     « Date d'ouverture ») ;
+   - en série : encadré « Programmer les questions non programmées »,
+     date de départ et nombre par jour (3), bouton « Programmer ». Les
+     questions sont prises dans l'ordre de la liste.
+4) Contrôle avec « Prévisualiser » : l'aperçu montre toutes les questions
+   non masquées, y compris celles des jours suivants, sans rien
+   enregistrer.
+
+
+AU QUOTIDIEN
+------------
+- Rien à faire : les questions s'ouvrent seules à leur date (heure de
+  Paris, à minuit).
+- Statuts dans la fiche : Ouverte, Programmée, Masquée, Non programmée.
+  « rattrapage » signale une question ouverte un jour précédent.
+- L'œil d'une question ouverte la masque : les réponses sont suspendues
+  mais elle compte toujours dans le maximum de son jour. Un second clic
+  la rouvre, toujours rattachée au même jour.
+- L'œil d'une question non programmée l'ouvre aujourd'hui.
+- Une question programmée dans le futur s'ouvre à sa date, même si elle
+  était masquée avant. Pour la retarder, change sa date.
+- Changer la date d'une question déjà répondue déplace ses points vers
+  le nouveau jour.
+- « Scores et réponses » : classement, tableau jour par jour, réponses
+  de chaque joueur. Supprimer une réponse retire ses points et permet au
+  joueur de répondre de nouveau.
+
+
+CODE OUBLIÉ OU TÉLÉPHONE CHANGÉ
+-------------------------------
+- Le joueur te demande son code : il est affiché dans la fiche du quiz.
+- Pour en donner un nouveau : ↻, puis « Enregistrer ». L'ancien code ne
+  fonctionne plus ; le téléphone redemande le code à la visite suivante.
+- Après 5 codes faux d'affilée, le joueur doit attendre 5 minutes.
+
+
+ATTENTION
+---------
+- Retirer un joueur de la liste supprime ses réponses et ses scores à
+  l'enregistrement (une confirmation est demandée).
+- Dupliquer un quiz copie les joueurs (avec leurs codes), les questions
+  et leurs dates, mais pas les réponses.
+- Les bonnes réponses restent lisibles par un joueur averti (outils de
+  développement du navigateur) et l'auto-évaluation repose sur
+  l'honnêteté : c'est une protection adaptée à un quiz entre voisines.

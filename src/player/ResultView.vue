@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
-import Icon from '../Icon.vue'
+import { ordinal, type PlayerStats } from '../board'
 import { formatScore, type Summary } from '../scoring'
 import { quizUrl } from '../utils'
 import { renderCard, shareResult } from './share'
 
-const props = defineProps<{ quizName: string; quizSlug: string; playerName: string; summary: Summary; answered: number; showPartial: boolean }>()
+const props = defineProps<{
+  quizName: string
+  quizSlug: string
+  playerName: string
+  /** Questions répondues pendant cette visite. */
+  summary: Summary
+  showPartial: boolean
+  /** Scores enregistrés (absents en aperçu ou si la lecture a échoué). */
+  stats: PlayerStats | null
+  preview?: boolean
+}>()
 
 /** Message de fin selon la part de points obtenue. */
 function endMessage() {
@@ -15,16 +25,19 @@ function endMessage() {
   if (ratio > 0) return `Pas mal ${props.playerName}, tu feras mieux la prochaine fois !`
   return `Merci d'avoir joué ${props.playerName} !`
 }
-const emit = defineEmits<{ replay: [] }>()
+const emit = defineEmits<{ scores: [] }>()
 
 const card = ref<HTMLElement | null>(null)
 const image = ref<Blob | null>(null)
 const status = ref<'preparing' | 'ready' | 'error'>('preparing')
 const message = ref('')
 
-const shareText = () =>
-  `J'ai eu ${formatScore(props.summary.total)} / ${props.summary.max} au quiz « ${props.quizName} » ! ` +
-  `À toi de jouer : ${quizUrl(props.quizSlug)}`
+const shareText = () => {
+  const s = props.stats
+  const today = s?.today ? `${formatScore(s.today.points)} / ${s.today.max} aujourd'hui` : `${formatScore(props.summary.total)} / ${props.summary.max}`
+  const total = s ? ` (cumul ${formatScore(s.total)} / ${s.maxTotal}${s.rank ? `, ${ordinal(s.rank)} au classement` : ''})` : ''
+  return `J'ai eu ${today} au quiz « ${props.quizName} »${total} ! À toi de jouer : ${quizUrl(props.quizSlug)}`
+}
 
 // L'image est préparée dès l'affichage : sur iPhone, le partage doit suivre immédiatement le toucher.
 onMounted(async () => {
@@ -75,7 +88,12 @@ async function share() {
         <div v-if="showPartial"><b>{{ summary.partial }}</b><span style="color: #ffe08a">{{ summary.partial > 1 ? 'partielles' : 'partielle' }}</span></div>
         <div><b>{{ summary.wrong }}</b><span style="color: #f7b2ac">{{ summary.wrong > 1 ? 'fausses' : 'fausse' }}</span></div>
       </div>
-      <span class="small" style="color: #9ca1c8">{{ answered }} questions répondues sur {{ summary.max }}</span>
+      <span class="small" style="color: #9ca1c8">{{ summary.max }} question{{ summary.max > 1 ? 's' : '' }} répondue{{ summary.max > 1 ? 's' : '' }} cette fois</span>
+      <div v-if="stats" class="card-stats">
+        <div v-if="stats.today"><span>Aujourd'hui</span><b>{{ formatScore(stats.today.points) }} / {{ stats.today.max }}</b></div>
+        <div><span>Cumul</span><b>{{ formatScore(stats.total) }} / {{ stats.maxTotal }}</b></div>
+        <div v-if="stats.rank"><span>Classement</span><b>{{ ordinal(stats.rank) }} sur {{ stats.ranking.length }}</b></div>
+      </div>
     </section>
 
     <div class="spacer"></div>
@@ -90,9 +108,8 @@ async function share() {
     </button>
     <p v-if="message" class="ok" role="status" style="text-align: center">{{ message }}</p>
     <p v-if="status === 'error'" class="small muted" style="text-align: center">L'image n'a pas pu être créée : seul le texte sera partagé.</p>
-    <button type="button" class="btn btn-secondary btn-big btn-block" @click="emit('replay')">
-      <Icon name="replay" /> Rejouer
-    </button>
-    <p class="small muted" style="text-align: center">Ton résultat n'est pas enregistré.</p>
+    <button v-if="stats" type="button" class="btn btn-secondary btn-big btn-block" @click="emit('scores')">Mes scores et le classement</button>
+    <p v-if="preview" class="small muted" style="text-align: center">Aperçu : rien n'est enregistré.</p>
+    <p v-else class="small muted" style="text-align: center">Tes réponses sont enregistrées. Les prochaines questions arrivent demain !</p>
   </main>
 </template>
